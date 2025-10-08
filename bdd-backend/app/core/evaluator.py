@@ -56,7 +56,21 @@ def eval_path(root, values: dict):
     trimmed_root = visited[root.id]
     return trimmed_root
 
-def test(root,value):
+def test(root:BDDNode,value):
+    if not root:
+        raise ValueError("Null root")
     if isinstance(value,str):
-        ls = value.split(' ')
+        ls = [x.split(':') for x in value.split(' ') ]
+        value = {k:v for [k,v] in ls}
+
+    visited = set()
+    queue = deque([root])
+    while queue:
+        node = queue.popleft()
+        if node.var is None:
+            node.highlight = True
+            #víti
+            continue
+            
+
         
