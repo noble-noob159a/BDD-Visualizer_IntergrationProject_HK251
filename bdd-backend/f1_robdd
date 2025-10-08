@@ -1,0 +1,29 @@
+// Binary Decision Diagram (BFS)
+digraph {
+	88 [label="s1 - (0)
+((b | s1) & (d | s2) & (a | ~s1) & (c | ~s2))" fillcolor=lightblue shape=oval style=filled]
+	88 -> 86 [style=dashed]
+	88 -> 87 [style=solid]
+	86 [label="b - (1)
+(b & (d | s2) & (c | ~s2))" fillcolor=lightblue shape=oval style=filled]
+	86 -> 73 [style=dashed]
+	86 -> 85 [style=solid]
+	87 [label="a - (2)
+(a & (d | s2) & (c | ~s2))" fillcolor=lightblue shape=oval style=filled]
+	87 -> 73 [style=dashed]
+	87 -> 85 [style=solid]
+	73 [label=False fillcolor=lightgray shape=box style=filled]
+	85 [label="s2 - (3)
+((d | s2) & (c | ~s2))" fillcolor=lightblue shape=oval style=filled]
+	85 -> 83 [style=dashed]
+	85 -> 84 [style=solid]
+	83 [label="d - (4)
+(d)" fillcolor=lightblue shape=oval style=filled]
+	83 -> 73 [style=dashed]
+	83 -> 72 [style=solid]
+	84 [label="c - (5)
+(c)" fillcolor=lightblue shape=oval style=filled]
+	84 -> 73 [style=dashed]
+	84 -> 72 [style=solid]
+	72 [label=True fillcolor=lightgray shape=box style=filled]
+}

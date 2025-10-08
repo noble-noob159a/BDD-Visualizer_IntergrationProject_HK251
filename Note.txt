@@ -1,0 +1,11 @@
+- Báo cáo tiếng Việt, k báo cáo định kỳ, Thuyết trình cuối khóa, k đạo văn
+
+- Cấu trúc báo cáo:
+1. Introduction
+2. Background/Related works
+3. System design - UML class...
+4. Implementation overview (no need code)
+5. Testing/Experiments/Evaluate
+6. Conclustion/Summary/Lesson learned
+
+- Next week: Chi tiết hóa: Overview, Mục tiêu của đề tài, Expect, Function/Non-funcional requirement, Công cụ/công nghệ xài, Outcome: web/app có github, final report

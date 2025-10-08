@@ -1,0 +1,29 @@
+Dự án P1:
+
+1. Tên dự án: BDD Visualizer --- Minh họa trực quan cấu trúc dữ liệu Binary Decision Diagrams
+
+2. Số lượng sinh viên: 4
+
+3. Mô tả dự án: Phát triển một ứng dụng web cho phép nhập công thức Boolean và tự động sinh ra Binary Decision Diagram (BDD) tương ứng. Hệ thống hiển thị đồ thị BDD một cách trực quan, hỗ trợ phóng to/thu nhỏ, và cho phép xuất ra hình ảnh.
+
+4. Tài liệu tham khảo:
+
++ Bryant, Randal E. "Graph-based algorithms for boolean function manipulation." Computers, IEEE Transactions on 100, no. 8 (1986): 677-691.
++ Công cụ trực quan hoá obst <https://nicze.de/philipp/bdds/>.
+
+===English below===
+
+Project P1:
+
+1.  Project Title: BDD Visualizer --- Visualizing the Binary Decision Diagram Data Structure
+    
+2.  Number of Students: 4
+    
+3.  Project Description: Develop a web application that allows users to input a Boolean formula and automatically generate the corresponding Binary Decision Diagram (BDD). The system should visualize the BDD graph in an interactive way, supporting zooming in/out and allowing export to image formats.
+    
+4.  References:
+    
++ Bryant, Randal E. "Graph-based algorithms for boolean function manipulation." Computers, IEEE Transactions on 100, no. 8 (1986): 677-691.
++ The obst visualisation <https://nicze.de/philipp/bdds/>.
+
++ https://github.com/suyjuris/obst

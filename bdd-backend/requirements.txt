@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pyparsing
+networkx
+jinja2
+python-dotenv
+loguru
+pytest
+httpx
+coverage
+graphviz
+sympy
