@@ -166,9 +166,9 @@ class BDD:
             node:BDDNode = queue.popleft()
             #logger.info(node.var)
             level = node.level
-            blow = True
+            bLow = True
             if node.low.expr in [True,False,0,1] or node.low is None or node.low.id in visited:
-                blow = False
+                bLow = False
             else:         
                 visited.add(node.low.id) 
                 node.low.step = step
@@ -178,48 +178,62 @@ class BDD:
                 node.high.step = step
                 step+=1
                 queue.appendleft(node.high)
-            if blow:
+            if bLow:
                 queue.appendleft(node.low)
-    if DEBUG:
-        def to_graphviz(self, filename="bdd_graph", step=True):
-            dot = Digraph(comment="Binary Decision Diagram (BFS)", format="png")
-            visited = set()
-            r = self.root
-            bdd = True
-            if r is None:
-                r = self.robdd_root
-                bdd = False
-            if step:
-                self.assign_step(r)
 
-            queue = deque([r])
+    def to_graphviz(self, filename="bdd_graph",show_expr=True, step=True, highlight=True, to_latex =False):
+        node_color = 'lightblue'
+        if to_latex:
+            node_color = 'white'
+            show_expr = False
+            step = False
+            highlight = False
+        dot = Digraph(comment="Binary Decision Diagram (BFS)", format="png")
+        visited = set()
+        r = self.root
+        bdd = True
+        if r is None or to_latex:
+            r = self.robdd_root
+            bdd = False
+        if r is None:
+            raise ValueError("Null root")
 
-            while queue:
-                node = queue.popleft()
-                if node.id in visited:
-                    continue
-                visited.add(node.id)
+        if step:
+            self.assign_step(r)
 
-                if node.var is None:
-                    label = str(node.expr)
-                    shape = "box"
-                    dot.node(str(node.id), label=label, shape=shape,
-                            style="filled", fillcolor="lightgray")
-                else:
-                    label = f"{node.var} - ({node.step})\n({node.expr_str})"
-                    dot.node(str(node.id), label=label, shape="oval",
-                            style="filled", fillcolor="lightblue")
+        queue = deque([r])
 
-                if node.low:
-                    queue.append(node.low)
-                    dot.edge(str(node.id), str(node.low.id),style="dashed")
-                if node.high:
-                    queue.append(node.high)
-                    dot.edge(str(node.id), str(node.high.id),style="solid")
+        while queue:
+            node = queue.popleft()
+            if node.id in visited:
+                continue
 
-            filename = f'{filename}_'+ ('bdd' if bdd else 'robdd')
+            visited.add(node.id)
+
+            if node.var is None:
+                label = str(node.expr)
+                shape = "box"
+                dot.node(str(node.id), label=label, shape=shape,
+                        style="filled", fillcolor="lightgray")
+            else:
+                expr = f'\n({node.expr_str})' if show_expr else ''
+                hl = f'\nHighligh: {node.highlight}' if highlight else ''
+                st = f' - ({node.step})' if step else ''
+                label = f"{node.var}{st}{hl}{expr}"
+                dot.node(str(node.id), label=label, shape="oval",
+                        style="filled", fillcolor=node_color)
+                
+            if node.low:
+                queue.append(node.low)
+                dot.edge(str(node.id), str(node.low.id),style="dashed")
+            if node.high:
+                queue.append(node.high)
+                dot.edge(str(node.id), str(node.high.id),style="solid")
+
+        filename = f'{filename}_'+ ('bdd' if bdd else 'robdd')
+        if not to_latex:
             dot.render(filename, view=False)
-            return dot
+        return dot
     
 
     def to_json(self, root, bdd_type="BDD",step=True):

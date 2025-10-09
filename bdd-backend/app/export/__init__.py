@@ -1,3 +1,4 @@
-from .tikz_export import bdd_to_tikz
+from .tikz_export import bdd2tex
 
-__all__ = ["bdd_to_tikz"]
+__all__ = ['bdd2tex']
+

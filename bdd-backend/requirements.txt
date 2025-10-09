@@ -10,3 +10,4 @@ httpx
 coverage
 graphviz
 sympy
+dot2tex

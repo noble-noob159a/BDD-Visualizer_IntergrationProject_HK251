@@ -5,6 +5,8 @@ from app.utils import*
 router = APIRouter()
 logger = get_logger('BDD API')
 
+cached_bdd = {}
+
 @router.post("/generate")
 def generate_bdd(formula: dict):
     #body = await request.json()   
