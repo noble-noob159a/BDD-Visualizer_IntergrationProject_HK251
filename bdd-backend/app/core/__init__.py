@@ -1,7 +1,6 @@
 from .parser import *
 from .bdd import BDD,BDDNode
 from .ordering import *
-from .evaluator import eval_path
 
 # __all__ = [
 #     "parse_formula",

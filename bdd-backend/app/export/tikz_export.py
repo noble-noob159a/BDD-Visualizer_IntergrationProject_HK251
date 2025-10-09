@@ -1,15 +1,16 @@
 import dot2tex
-from app.core.bdd import BDD
+from app.core.bdd import BDD, BDDNode
 
-def bdd2tex(r, file_name):
+def bdd2tex(r, file_name='tex', to_file = True):
 
-    if isinstance(r, BDD):
-        dot = r.to_graphviz(to_latex=True)
+    if isinstance(r, BDDNode):
+        dot = BDD.to_graphviz(r,to_latex=True)
     else:
         dot = r
     xdot_file = f'xdot.xdot'
     try:
         dot.render('xdot', format='xdot', cleanup=True, view=False)
+        #xdot_content = dot.pipe(format='xdot').decode('utf-8')
     except Exception as e:
         print(f"Graphviz render failed: {e}")
         raise
@@ -30,9 +31,11 @@ def bdd2tex(r, file_name):
             figonly=True, 
             graphstyle='scale=0.8, transform shape'
         )
-        
-        with open(file_name, 'w') as f:
-            f.write(tikz_content)
+        if to_file:
+            with open(file_name, 'w') as f:
+                f.write(tikz_content)
+        else:
+            return tikz_content
         
     except Exception as e:
         print(f"Error with dot2tex: {e}")

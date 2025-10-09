@@ -40,13 +40,14 @@ class BDD:
     """
     def __init__(self,expr_str,var_order=None,parsed=None):
         self.expr_str = expr_str
-        self.var_name = get_var_name(expr_str)
         if var_order:
             if isinstance(var_order, list):
                 self.var_name = var_order
             else:
                 self.var_name = get_var_order(self.var_name,var_order)
                 #logger.info(self.var_name)
+        else:
+            self.var_name = get_var_name(expr_str)
         if parsed:
             self.parsed_expr = parsed
         else:
@@ -55,6 +56,7 @@ class BDD:
         self.vars = {v: symbols(v) for v in self.var_name}
         self.root = None
         self.robdd_root = None
+        self.highlighted = None
 
     def build_bdd(self):
         true_terminal = BDDNode(len(self.var_name),None,True,'True')
@@ -157,7 +159,8 @@ class BDD:
         self.robdd_root = repr_map[root.id]
         return self.robdd_root
     
-    def assign_step(self,root):
+    @staticmethod
+    def assign_step(root):
         visited = set()
         queue = deque([root])
         root.step = 0
@@ -181,27 +184,26 @@ class BDD:
             if bLow:
                 queue.appendleft(node.low)
 
-    def to_graphviz(self, filename="bdd_graph",show_expr=True, step=True, highlight=True, to_latex =False):
+    @staticmethod
+    def to_graphviz(root, filename="bdd_graph",show_expr=True, step=True, highlight=True, to_latex =False, type='ROBDD'):
+        if root is None:
+            raise ValueError("Null root")
+        
         node_color = 'lightblue'
         if to_latex:
             node_color = 'white'
             show_expr = False
             step = False
             highlight = False
+        
         dot = Digraph(comment="Binary Decision Diagram (BFS)", format="png")
         visited = set()
-        r = self.root
-        bdd = True
-        if r is None or to_latex:
-            r = self.robdd_root
-            bdd = False
-        if r is None:
-            raise ValueError("Null root")
 
+        bdd = True if type == 'BDD' else False
         if step:
-            self.assign_step(r)
+            BDD.assign_step(root)
 
-        queue = deque([r])
+        queue = deque([root])
 
         while queue:
             node = queue.popleft()
@@ -236,9 +238,9 @@ class BDD:
         return dot
     
 
-    def to_json(self, root, bdd_type="BDD",step=True):
+    def to_json(self,root, bdd_type="ROBDD",step=True):
         if step:
-            self.assign_step(root)
+            BDD.assign_step(root)
         visited = set()
         queue = deque([root])
         nodes = {}
@@ -256,6 +258,7 @@ class BDD:
                     "expr": node.expr_str,
                     "level": node.level,
                     "step": node.step,
+                    "highlight": node.highlight,
                     "low": n_id(node.low) if node.low is not None else None,
                     "high": n_id(node.high) if node.high is not None else None,
             }
@@ -290,6 +293,10 @@ class BDD:
         return size
     
     def auto_order(self,local_sift=True,robdd=True):
+        """
+        Auto find efficient ordering by ordering vars by frequency or use local sifting
+        Build a BDD/ROBDD for that vars order
+        """
         if local_sift:
             self.local_sifting(robdd)
         else:
@@ -341,3 +348,65 @@ class BDD:
             self.root = best_bdd["root"]
         
         logger.info(f'Best size: {best_bdd["size"]}, Order: {ordered_vars}')
+
+
+    def eval_path(self,root,values):
+        """
+        Highlight node with variable value string or dict
+        Input example: 'a:0 b:1 c:1' or {'a':0, 'b':1, 'c':1}
+        If a variable is not assigned, eval both low and high path.
+        """
+        if not root:
+            raise ValueError("Null root")
+        
+        if isinstance(values,str):
+            ls = [x.split(':') for x in values.split(' ') ]
+            values = {k:int(v) for [k,v] in ls}
+
+        if self.highlighted and self.highlighted == values:
+            return
+        if self.highlighted:
+            self.clear_highlight(root)
+
+        visited = set()
+        queue = deque([root])
+        while queue:
+            node = queue.popleft()
+            if node.id in visited:
+                continue
+
+            if node.var is None:
+                node.highlight = True
+                visited.add(node.id)
+                continue
+
+            visited.add(node.id)
+            node.highlight = True
+            if node.var in values:
+                val = values[node.var]
+                child = node.high if val == 1 else node.low
+                if child.id not in visited:
+                    queue.append(child)
+            else:
+                if node.low.id not in visited:
+                    queue.append(node.low)
+                if node.high.id not in visited:
+                    queue.append(node.high)
+
+        self.highlighted = values
+
+    @staticmethod
+    def clear_highlight(root):
+        visited = set()
+        queue = deque([root])
+        while queue:
+            node = queue.popleft()
+            if node.id in visited:
+                continue
+            visited.add(node.id)
+            node.highlight = None
+            if node.low and node.low.id not in visited:
+                queue.append(node.low)
+            if node.high and node.high.id not in visited:
+                queue.append(node.high)
+
