@@ -192,5 +192,6 @@
 }
 ```
 - Error Responses:
+  - 400 Bad Request: {"status": "error","message": "Missing 'formula' field."}. Caused by missing input formula.
   - 404: {"status": "error","message": "Formula not found in cache. Please call /generate first."}. Caused by not calling /generate before exporting.
   - 500 Internal Server Error: {"status": "error","message": str(e)}. Caused by graphviz/dot2tex exception while exporting latex code.

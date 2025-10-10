@@ -13,6 +13,12 @@ def generate_bdd(data: dict = Body(...)):
     formula_str = data.get("formula")
     graph_type = data.get("graph_type", "robdd")
     isROBDD = graph_type == 'robdd'
+    if not formula_str:
+            return JSONResponse(status_code=400, content={
+                "status": "error",
+                "message": "Missing 'formula' field."
+            })
+    formula_str = formula_str.replace(" ", "")
     try:
         if formula_str not in BDD_Cache.cache:
             return JSONResponse(status_code=404, content={

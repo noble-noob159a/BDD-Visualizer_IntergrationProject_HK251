@@ -27,7 +27,7 @@ def generate_bdd(data: dict = Body(...)):
         isROBDD = graph_type == 'robdd'
         cache_key = formula_str
         if cache_key in BDD_Cache.cache:
-            #logger.info(f"Cache hit for {cache_key}")
+            logger.info(f"Cache hit for {cache_key}")
             bdd = BDD_Cache.cache[cache_key]
             if var_order:
                 #logger.info(f"yoyo")
