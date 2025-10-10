@@ -7,9 +7,9 @@
 - Request Body: Json/dict
     - "fomular": boolean expression string, required for this api. Variables name start with '_' or lowercase letter, may contain lowercase letter, number and '_'. Support operator: ~ & | -> <-> and ().
     - "graph_type": 'robdd' or 'bdd', default: 'robdd'
-    - "var_order": string of variables in formular, separated by space: 'x1 x3 x2' or 'a b d c e'
-    - "auto_order": for auto find optimize ordering by heuristics. Can be `ls` for local sifting or `freq` for frequency sorting. The "var_order" field should be None if use this field. Default: None
-    - "eval_path": path highlighting for input variable values. String of `variables:values` pairs, separated by space. Example input string: 'a:0 b:1 c:1' or 'x1:0 x2:1'. Default: None
+    - "var_order": string of variables in formular, separated by space: 'x1 x3 x2' or 'a b d c e'. Default: None, using original order in expression.
+    - "auto_order": auto find optimize ordering by heuristics. Can be `ls` for local sifting or `freq` for frequency sorting. The `var_order` field should be None while using this field. Default: None, not optimized.
+    - "eval_path": path highlighting for input variable values. String of `variables:values` pairs, separated by space. Example input string: 'a:0 b:1 c:1' or 'x1:0 x2:1'. Default: None. If a variable is not assigned, evaluate both low and high path.
 
 - Example request
 ```
