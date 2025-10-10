@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from fastapi import Request
+#from fastapi import Request
 from app.utils import*
 from fastapi.responses import JSONResponse
 from app.core import*
@@ -8,10 +8,10 @@ router = APIRouter()
 logger = get_logger('BDD API')
 
 @router.post("/generate")
-async def generate_bdd(request: Request):
+def generate_bdd(data:dict):
     try:
-        data = await request.json()
-        formula_str = data.get("formula")   # 'a&b|c->~e<->f' - required
+        #data = request.json()
+        formula_str = data.get("formula",None)   # 'a&b|c->~e<->f' - required
         graph_type = data.get("graph_type", "robdd")  # 'robdd' or 'bdd'
         var_order = data.get("var_order",None)   # 'x1 x3 x2'
         auto_order = data.get("auto_order",None) # 'ls' or 'freq'
@@ -44,7 +44,7 @@ async def generate_bdd(request: Request):
         if eval_path:
             bdd.eval_path(bdd.robdd_root if isROBDD else bdd.root, eval_path)
 
-        
+        logger.info(f"Cache: {BDD_Cache.cache}")
         return {
             "status": "success",
             "graph_type": graph_type,

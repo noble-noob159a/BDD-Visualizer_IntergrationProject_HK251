@@ -7,9 +7,9 @@ from app.export import*
 router = APIRouter()
 
 
-@router.post("/export/latex")
-async def export_latex(request: Request):
-    data = await request.json()
+@router.post("/latex")
+def export_latex(data:dict):
+    #data = request.json()
     formula_str = data.get("formula")
     graph_type = data.get("graph_type", "robdd")
     isROBDD = graph_type == 'robdd'
