@@ -1,7 +1,7 @@
 import dot2tex
 from app.core.bdd import BDD, BDDNode
 
-def bdd2tex(r, file_name='tex', to_file = True):
+def bdd2tex(r, file_name='tex'):
 
     if isinstance(r, BDDNode):
         dot = BDD.to_graphviz(r,to_latex=True)
@@ -31,11 +31,11 @@ def bdd2tex(r, file_name='tex', to_file = True):
             figonly=True, 
             graphstyle='scale=0.8, transform shape'
         )
-        if to_file:
-            with open(file_name, 'w') as f:
-                f.write(tikz_content)
-        else:
-            return tikz_content
+        
+        with open(file_name, 'w') as f:
+            f.write(tikz_content)
+        
+        return tikz_content
         
     except Exception as e:
         print(f"Error with dot2tex: {e}")

@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Body
-from fastapi import Request
 from app.utils import*
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from app.core import*
 from app.export import*
-router = APIRouter()
 
+router = APIRouter()
 
 @router.post("/latex")
 def generate_bdd(data: dict = Body(...)):
@@ -27,7 +26,7 @@ def generate_bdd(data: dict = Body(...)):
             })
 
         bdd = BDD_Cache.cache[formula_str]
-        tex_code = bdd2tex(bdd.robdd_root if isROBDD else bdd.root,to_file=False)
+        tex_code = bdd2tex(bdd.robdd_root if isROBDD else bdd.root)
 
         
         return {
@@ -42,3 +41,4 @@ def generate_bdd(data: dict = Body(...)):
             "status": "error",
             "message": str(e)
         })
+    
