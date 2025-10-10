@@ -1,6 +1,5 @@
 from graphviz import Digraph
 from collections import deque, defaultdict
-import json
 from sympy.parsing.sympy_parser import parse_expr
 from sympy import symbols, simplify_logic
 from app.core import*
@@ -40,14 +39,13 @@ class BDD:
     """
     def __init__(self,expr_str,var_order=None,parsed=None):
         self.expr_str = expr_str
+        self.var_name = get_var_name(expr_str)
         if var_order:
             if isinstance(var_order, list):
                 self.var_name = var_order
             else:
                 self.var_name = get_var_order(self.var_name,var_order)
-                #logger.info(self.var_name)
-        else:
-            self.var_name = get_var_name(expr_str)
+ 
         if parsed:
             self.parsed_expr = parsed
         else:
@@ -275,7 +273,7 @@ class BDD:
 
         #data = {"nodes": nodes, "edges": edges}
         data = {"nodes": nodes, "root": n_id(root), "variables":[v for v in self.var_name], "type":bdd_type}
-        return json.dumps(data, indent=2)
+        return data
     
     @staticmethod
     def bdd_size(root):
@@ -363,8 +361,6 @@ class BDD:
             ls = [x.split(':') for x in values.split(' ') ]
             values = {k:int(v) for [k,v] in ls}
 
-        if self.highlighted and self.highlighted == values:
-            return
         if self.highlighted:
             self.clear_highlight(root)
 
