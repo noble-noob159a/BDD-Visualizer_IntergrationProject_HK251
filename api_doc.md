@@ -17,7 +17,7 @@
   "formula": "a&b|c->~e<->f",
   "graph_type": "robdd",
   "var_order": "b a c f e",
-  "auto_order": None,
+  "auto_order": null,
   "eval_path": "a:1 b:1 c:0 e:1 f:0"
 }
 ```

@@ -8,4 +8,4 @@ def health_check():
 
 @router.get("/")
 def root():
-    return {"message": "Backend is up and running..."}
+    return {"message": "Backend is up and running. Navigate to ./docs for Swagger contents"}

@@ -23,6 +23,7 @@ def generate_bdd(data: dict = Body(...)):
                 "status": "error",
                 "message": "Missing 'formula' field."
             })
+        formula_str = formula_str.replace(" ", "")
         isROBDD = graph_type == 'robdd'
         cache_key = formula_str
         if cache_key in BDD_Cache.cache:
