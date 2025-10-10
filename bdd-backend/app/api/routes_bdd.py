@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 #from fastapi import Request
 from app.utils import*
 from fastapi.responses import JSONResponse
@@ -8,7 +8,7 @@ router = APIRouter()
 logger = get_logger('BDD API')
 
 @router.post("/generate")
-def generate_bdd(data:dict):
+def generate_bdd(data: dict = Body(...)):
     try:
         #data = request.json()
         formula_str = data.get("formula",None)   # 'a&b|c->~e<->f' - required

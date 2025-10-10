@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from fastapi import Request
 from app.utils import*
 from fastapi.responses import JSONResponse
@@ -8,7 +8,7 @@ router = APIRouter()
 
 
 @router.post("/latex")
-def export_latex(data:dict):
+def generate_bdd(data: dict = Body(...)):
     #data = request.json()
     formula_str = data.get("formula")
     graph_type = data.get("graph_type", "robdd")
