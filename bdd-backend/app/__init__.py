@@ -9,7 +9,7 @@ def create_app() -> FastAPI:
         version="1.0.0"
     )
 
-    app.include_router(routes_utils.router, prefix="/api/utils", tags=["Utils"])
+    app.include_router(routes_utils.router, tags=["Utils"])
     app.include_router(routes_bdd.router, prefix="/api/bdd", tags=["BDD/ROBDD"])
     app.include_router(routes_export.router, prefix="/api/export", tags=["Export"])
 

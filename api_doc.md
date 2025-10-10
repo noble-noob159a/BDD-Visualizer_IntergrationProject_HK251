@@ -22,7 +22,7 @@
 }
 ```
  
-- Example Response 
+- Example Response Body
 ```
 {
   "status": "success",
@@ -151,7 +151,7 @@
 }
 ```
 
-- Example Response 
+- Example Response Body
 ```
 {
   "status": "success",
