@@ -157,7 +157,7 @@
   "status": "success",
   "graph_type": "robdd",
   "formula": "a&b|c->~e<->f",
-  "latex":   #this latex code should be write to .tex format, below is example .tex file  
+  "latex":   #this latex code should be write to .tex file, below is example .tex file  
 "
 \begin{tikzpicture}[>=latex,line join=bevel,scale=0.8, transform shape]
 %%
