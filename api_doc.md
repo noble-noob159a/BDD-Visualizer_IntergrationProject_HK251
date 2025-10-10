@@ -1,9 +1,9 @@
-Main api:
+# Main api:
  - Create BDD/ROBDD, variables ordering and path highlight (POST): `/api/bdd/generate`
  - Export to latex/tikz (POST): `/api/export/latex`
 
 
-`/api/bdd/generate`:
+# `/api/bdd/generate`:
 - Request Body: Json/dict
     - "fomular": boolean expression string, required for this api. Variables name start with '_' or lowercase letter, may contain lowercase letter, number and '_'. Support operator: ~ & | -> <-> and ().
     - "graph_type": 'robdd' or 'bdd', default: 'robdd'
@@ -138,7 +138,7 @@ Main api:
   - 400 Bad Request: {"status": "error","message": "Missing 'formula' field."}. Caused by missing input formula.
   - 500 Internal Server Error: {"status": "error","message": str(e)}. Caused by wrong variable names, wrong operator, wrong format in `var_order` or `eval_path`, ...
 
-`api/export/latex`: Required run /generate bdd/robdd before export to latex
+# `api/export/latex`: Required run /generate bdd/robdd before export to latex
 - Request Body: Json/dict
     - "fomular": Same as `/genarate`.
     - "graph_type": 'robdd' or 'bdd', default: 'robdd'
@@ -190,7 +190,7 @@ Main api:
 \end{tikzpicture}
 "
 }
-
+```
 - Error Responses:
   - 404: {"status": "error","message": "Formula not found in cache. Please call /generate first."}. Caused by not calling /generate before exporting.
   - 500 Internal Server Error: {"status": "error","message": str(e)}. Caused by graphviz/dot2tex exception while exporting latex code.
