@@ -38,6 +38,8 @@ export default function BDDVisualizer() {
   const [variables, setVariables] = useState<string[]>([])
   const [customOrder, setCustomOrder] = useState<string>("")
   const [orderingMethod, setOrderingMethod] = useState<"custom" | "auto" | "none">("none")
+  const [variableValues, setVariableValues] = useState<Record<string, number>>({})
+  const [showEvalPath, setShowEvalPath] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number | null>(null)
 
@@ -58,6 +60,18 @@ export default function BDDVisualizer() {
         requestBody.var_order = customOrder.trim();
       } else if (orderingMethod === "auto") {
         requestBody.auto_order = "ls"; // Use local sifting for auto ordering
+      }
+      
+      // Add variable values for evaluation path if enabled
+      if (showEvalPath && Object.keys(variableValues).length > 0) {
+        const evalPathStr = Object.entries(variableValues)
+          .filter(([_, value]) => value !== undefined)
+          .map(([variable, value]) => `${variable}:${value}`)
+          .join(' ');
+        
+        if (evalPathStr) {
+          requestBody.eval_path = evalPathStr;
+        }
       }
 
       const response = await fetch("/api/generate", {
@@ -196,13 +210,30 @@ export default function BDDVisualizer() {
       const pos = nodePositions[node.id]
       if (!pos) return
 
+      const isNodeHighlighted = node.highlight === true || node.highlight === 1
+
       if (node.low && visibleNodes.has(node.low)) {
         const lowPos = nodePositions[node.low]
         if (lowPos) {
+          const lowNode = bddData.nodes[node.low]
+          const isLowHighlighted = lowNode && (lowNode.highlight === true || lowNode.highlight === 1)
+          const isEdgeHighlighted = isNodeHighlighted && isLowHighlighted
+          
           ctx.save()
           ctx.setLineDash([5, 5])
-          ctx.strokeStyle = "#666"
-          ctx.lineWidth = 2
+          
+          if (isEdgeHighlighted) {
+            // Highlighted low edge (dashed)
+            ctx.strokeStyle = "#ff5722"
+            ctx.lineWidth = 4
+            ctx.shadowColor = "#ff5722"
+            ctx.shadowBlur = 10
+          } else {
+            // Normal low edge (dashed)
+            ctx.strokeStyle = "#666"
+            ctx.lineWidth = 2
+          }
+          
           ctx.beginPath()
           ctx.moveTo(pos.x, pos.y + 25)
           ctx.lineTo(lowPos.x, lowPos.y - 25)
@@ -214,12 +245,29 @@ export default function BDDVisualizer() {
       if (node.high && visibleNodes.has(node.high)) {
         const highPos = nodePositions[node.high]
         if (highPos) {
-          ctx.strokeStyle = "#333"
-          ctx.lineWidth = 2
+          const highNode = bddData.nodes[node.high]
+          const isHighHighlighted = highNode && (highNode.highlight === true || highNode.highlight === 1)
+          const isEdgeHighlighted = isNodeHighlighted && isHighHighlighted
+          
+          ctx.save()
+          
+          if (isEdgeHighlighted) {
+            // Highlighted high edge (solid)
+            ctx.strokeStyle = "#ff5722"
+            ctx.lineWidth = 4
+            ctx.shadowColor = "#ff5722"
+            ctx.shadowBlur = 10
+          } else {
+            // Normal high edge (solid)
+            ctx.strokeStyle = "#333"
+            ctx.lineWidth = 2
+          }
+          
           ctx.beginPath()
           ctx.moveTo(pos.x, pos.y + 25)
           ctx.lineTo(highPos.x, highPos.y - 25)
           ctx.stroke()
+          ctx.restore()
         }
       }
     })
@@ -237,32 +285,43 @@ export default function BDDVisualizer() {
       const isTerminal = node.var === null
       const isOne = node.expr === "1" || node.expr === "True"
       const displayText = node.var || (isOne ? "1" : "0")
+      const isHighlighted = node.highlight === true || node.highlight === 1
 
       ctx.save()
 
       if (isTerminal) {
-        // terminals: green/red; newly added terminals get a brighter border
-        ctx.fillStyle = isOne ? "#81c784" : "#e57373"
-        ctx.strokeStyle = isCurrentAdded ? "#ffeb3b" : "#333"
-        ctx.lineWidth = isCurrentAdded ? 4 : 2
+        // terminals: green/red; newly added terminals get yellow fill
+        ctx.fillStyle = isCurrentAdded ? "#ffeb3b" : (isOne ? "#81c784" : "#e57373")
+        ctx.strokeStyle = isHighlighted ? "#ff5722" : "#333"
+        ctx.lineWidth = isHighlighted ? 4 : 2
         ctx.fillRect(pos.x - 40, pos.y - 20, 80, 40)
         ctx.strokeRect(pos.x - 40, pos.y - 20, 80, 40)
+        
+        // Add glow effect for highlighted nodes
+        if (isHighlighted) {
+          ctx.shadowColor = "#ff5722";
+          ctx.shadowBlur = 15;
+          ctx.strokeRect(pos.x - 40, pos.y - 20, 80, 40);
+          ctx.shadowBlur = 0;
+        }
       } else {
-        // decision nodes: normal blue; newly added get yellow highlight ring
-        ctx.fillStyle = "#90caf9"
-        ctx.strokeStyle = "#333"
-        ctx.lineWidth = 2
+        // decision nodes: normal blue; newly added get yellow fill
+        ctx.fillStyle = isCurrentAdded ? "#ffeb3b" : (isHighlighted ? "#42a5f5" : "#90caf9")
+        ctx.strokeStyle = isHighlighted ? "#ff5722" : "#333"
+        ctx.lineWidth = isHighlighted ? 4 : 2
         ctx.beginPath()
         ctx.arc(pos.x, pos.y, 30, 0, Math.PI * 2)
         ctx.fill()
         ctx.stroke()
-
-        if (isCurrentAdded) {
-          ctx.beginPath()
-          ctx.strokeStyle = "#ffeb3b"
-          ctx.lineWidth = 6
-          ctx.arc(pos.x, pos.y, 36, 0, Math.PI * 2)
-          ctx.stroke()
+        
+        // Add evaluation path highlight
+        if (isHighlighted) {
+          ctx.shadowColor = "#ff5722";
+          ctx.shadowBlur = 15;
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 30, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
         }
       }
 
@@ -398,24 +457,46 @@ export default function BDDVisualizer() {
     }
     expandVisible(visibleNodes)
 
-    let svgContent = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">\n`
+    let svgContent = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">\n
+  <defs>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>\n`
 
     Object.values(bddData.nodes).forEach((node) => {
       if (!visibleNodes.has(node.id)) return
       const pos = nodePositions[node.id]
       if (!pos) return
+      
+      const isNodeHighlighted = node.highlight === true || node.highlight === 1
 
       if (node.low && visibleNodes.has(node.low)) {
         const lowPos = nodePositions[node.low]
         if (lowPos) {
-          svgContent += `  <line x1="${pos.x}" y1="${pos.y + 25}" x2="${lowPos.x}" y2="${lowPos.y - 25}" stroke="#666" stroke-width="2" stroke-dasharray="5,5"/>\n`
+          const lowNode = bddData.nodes[node.low]
+          const isLowHighlighted = lowNode && (lowNode.highlight === true || lowNode.highlight === 1)
+          const isEdgeHighlighted = isNodeHighlighted && isLowHighlighted
+          
+          const strokeColor = isEdgeHighlighted ? "#ff5722" : "#666";
+          const strokeWidth = isEdgeHighlighted ? "4" : "2";
+          
+          svgContent += `  <line x1="${pos.x}" y1="${pos.y + 25}" x2="${lowPos.x}" y2="${lowPos.y - 25}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-dasharray="5,5" ${isEdgeHighlighted ? 'filter="url(#glow)"' : ''}/>\n`
         }
       }
 
       if (node.high && visibleNodes.has(node.high)) {
         const highPos = nodePositions[node.high]
         if (highPos) {
-          svgContent += `  <line x1="${pos.x}" y1="${pos.y + 25}" x2="${highPos.x}" y2="${highPos.y - 25}" stroke="#333" stroke-width="2"/>\n`
+          const highNode = bddData.nodes[node.high]
+          const isHighHighlighted = highNode && (highNode.highlight === true || highNode.highlight === 1)
+          const isEdgeHighlighted = isNodeHighlighted && isHighHighlighted
+          
+          const strokeColor = isEdgeHighlighted ? "#ff5722" : "#333";
+          const strokeWidth = isEdgeHighlighted ? "4" : "2";
+          
+          svgContent += `  <line x1="${pos.x}" y1="${pos.y + 25}" x2="${highPos.x}" y2="${highPos.y - 25}" stroke="${strokeColor}" stroke-width="${strokeWidth}" ${isEdgeHighlighted ? 'filter="url(#glow)"' : ''}/>\n`
         }
       }
     })
@@ -428,13 +509,49 @@ export default function BDDVisualizer() {
       const isTerminal = node.var === null
       const isOne = node.expr === "1" || node.expr === "True"
       const displayText = node.var || (isOne ? "1" : "0")
+      const isHighlighted = node.highlight === true || node.highlight === 1
+      const currentAdded = new Set<string>((steps[currentStep]?.addedNodeIds) || [])
+      const isCurrentAdded = currentAdded.has(node.id)
 
       if (isTerminal) {
-        const fillColor = isOne ? "#81c784" : "#e57373"
-        svgContent += `  <rect x="${pos.x - 40}" y="${pos.y - 20}" width="80" height="40" fill="${fillColor}" stroke="#333" stroke-width="2"/>\n`
+        // For terminal nodes
+        let fillColor = isOne ? "#4caf50" : "#e57373"; // Green for 1, Red for 0
+        if (isCurrentAdded) {
+          fillColor = "#ffeb3b"; // Yellow for current step
+        } else if (isOne) {
+          fillColor = "#81c784"; // Green for 1/true
+        }
+        
+        let strokeColor = isHighlighted ? "#ff5722" : "#333";
+        let strokeWidth = isHighlighted ? "4" : "2";
+        
+        svgContent += `  <rect x="${pos.x - 40}" y="${pos.y - 20}" width="80" height="40" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>\n`
+        
+        // Add extra stroke for highlighted nodes
+        if (isHighlighted) {
+          svgContent += `  <rect x="${pos.x - 40}" y="${pos.y - 20}" width="80" height="40" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" filter="url(#glow)"/>\n`
+        }
+        
         svgContent += `  <text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-size="16" font-weight="bold">${displayText}</text>\n`
       } else {
-        svgContent += `  <circle cx="${pos.x}" cy="${pos.y}" r="30" fill="#90caf9" stroke="#333" stroke-width="2"/>\n`
+        // For decision nodes
+        let fillColor = "#90caf9"; // Default blue
+        if (isCurrentAdded) {
+          fillColor = "#ffeb3b"; // Yellow for current step
+        } else if (isHighlighted) {
+          fillColor = "#42a5f5"; // Darker blue for highlighted
+        }
+        
+        let strokeColor = isHighlighted ? "#ff5722" : "#333";
+        let strokeWidth = isHighlighted ? "4" : "2";
+        
+        svgContent += `  <circle cx="${pos.x}" cy="${pos.y}" r="30" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>\n`
+        
+        // Add extra stroke for highlighted nodes
+        if (isHighlighted) {
+          svgContent += `  <circle cx="${pos.x}" cy="${pos.y}" r="30" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" filter="url(#glow)"/>\n`
+        }
+        
         svgContent += `  <text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-size="16" font-weight="bold">${displayText}</text>\n`
       }
     })
@@ -460,6 +577,7 @@ export default function BDDVisualizer() {
         body: JSON.stringify({
           formula: formula,
           graph_type: graphType,
+          eval_path: showEvalPath ? variableValues : null,
         }),
       })
 
@@ -586,6 +704,50 @@ export default function BDDVisualizer() {
               <div className={styles.currentOrderContainer}>
                 <small className={styles.hint}>
                   Current variable order: {bddData.variables.join(" > ")}
+                </small>
+              </div>
+            )}
+          </div>
+          
+          <div className={styles.formGroup}>
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={showEvalPath}
+                onChange={(e) => setShowEvalPath(e.target.checked)}
+              />
+              Show Evaluation Path
+            </label>
+            
+            {showEvalPath && (
+              <div className={styles.variableValuesContainer}>
+                <div className={styles.variableValuesGrid}>
+                  {formula.replace(/[^a-z_]/g, '').split('').filter((v, i, a) => a.indexOf(v) === i).map(variable => (
+                    <div key={variable} className={styles.variableValueItem}>
+                      <label htmlFor={`var-${variable}`}>{variable}:</label>
+                      <select
+                        id={`var-${variable}`}
+                        value={variableValues[variable] !== undefined ? variableValues[variable].toString() : ""}
+                        onChange={(e) => {
+                          const newValues = {...variableValues};
+                          if (e.target.value === "") {
+                            delete newValues[variable];
+                          } else {
+                            newValues[variable] = parseInt(e.target.value);
+                          }
+                          setVariableValues(newValues);
+                        }}
+                        className={styles.variableSelect}
+                      >
+                        <option value="">Not set</option>
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                <small className={styles.hint}>
+                  Set variable values to highlight the evaluation path in the diagram
                 </small>
               </div>
             )}

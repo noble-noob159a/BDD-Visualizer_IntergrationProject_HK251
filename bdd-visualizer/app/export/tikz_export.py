@@ -1,10 +1,10 @@
 import dot2tex
 from app.core.bdd import BDD, BDDNode
 
-def bdd2tex(r, file_name='tex'):
+def bdd2tex(r, file_name='tex', highlight=False):
 
     if isinstance(r, BDDNode):
-        dot = BDD.to_graphviz(r,to_latex=True)
+        dot = BDD.to_graphviz(r, to_latex=True, highlight=highlight)
     else:
         dot = r
     xdot_file = f'xdot.xdot'
@@ -27,7 +27,6 @@ def bdd2tex(r, file_name='tex'):
             crop=False,             
             straightedges=False,    
             #codeonly = True,
-            nodeoptions='draw, minimum width=2cm, minimum height=1cm',
             figonly=True, 
             graphstyle='scale=0.8, transform shape'
         )

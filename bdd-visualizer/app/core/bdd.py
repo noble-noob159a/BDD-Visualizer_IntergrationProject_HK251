@@ -183,21 +183,31 @@ class BDD:
                 queue.appendleft(node.low)
 
     @staticmethod
-    def to_graphviz(root, filename="bdd_graph",show_expr=True, step=True, highlight=True, to_latex =False, type='ROBDD'):
+    def to_graphviz(root, filename="bdd_graph", show_expr=True, step=True, highlight=True, to_latex=False, type='ROBDD'):
         if root is None:
             raise ValueError("Null root")
         
-        node_color = 'lightblue'
+        default_fill = 'white' if to_latex else '#90caf9'
+        highlight_fill = 'blue!30'
+
         if to_latex:
-            node_color = 'white'
             show_expr = False
             step = False
-            highlight = False
-        
-        dot = Digraph(comment="Binary Decision Diagram (BFS)", format="png")
-        visited = set()
 
-        bdd = True if type == 'BDD' else False
+        dot = Digraph(comment="Binary Decision Diagram (BFS)", format="png")
+
+        # FIX 1: Set global node attributes to enforce shape and size consistently.
+        dot.node_attr.update(
+            shape='rectangle',
+            style='filled',
+            fixedsize='true',
+            width='1.2',
+            height='0.6',
+            fontsize='12'
+        )
+
+        visited = set()
+        is_bdd = True if type == 'BDD' else False
         if step:
             BDD.assign_step(root)
 
@@ -207,30 +217,45 @@ class BDD:
             node = queue.popleft()
             if node.id in visited:
                 continue
-
             visited.add(node.id)
 
             if node.var is None:
                 label = str(node.expr)
-                shape = "box"
-                dot.node(str(node.id), label=label, shape=shape,
-                        style="filled", fillcolor="lightgray")
+                fillcolor = "lightgray"
+                if highlight and node.highlight:
+                    fillcolor = highlight_fill
+                dot.node(str(node.id), label=label, fillcolor=fillcolor)
             else:
-                expr = f'\n({node.expr_str})' if show_expr else ''
-                hl = f'\nHighligh: {node.highlight}' if highlight else ''
-                st = f' - ({node.step})' if step else ''
-                label = f"{node.var}{st}{hl}{expr}"
-                dot.node(str(node.id), label=label, shape="oval",
-                        style="filled", fillcolor=node_color)
+                # FIX 2: Sanitize the expression string to remove any problematic characters.
+                clean_expr_str = getattr(node, "expr_str", "") or ""
+                clean_expr_str = clean_expr_str.replace('\r', '').replace('\n', ' ')
+
+                st = f' - ({node.step})' if step and node.step is not None else ''
+                expr = f'\\n({clean_expr_str})' if show_expr and clean_expr_str else ''
+                label = f"{node.var}{st}{expr}"
                 
+                fillcolor = default_fill
+                if highlight and node.highlight:
+                    fillcolor = highlight_fill
+                dot.node(str(node.id), label=label, fillcolor=fillcolor)
+            
             if node.low:
                 queue.append(node.low)
-                dot.edge(str(node.id), str(node.low.id),style="dashed")
+                edge_attrs = {"style": "dashed"}
+                if highlight and getattr(node, "highlight", False) and getattr(node.low, "highlight", False):
+                    edge_attrs["color"] = highlight_fill
+                    edge_attrs["penwidth"] = "3"
+                dot.edge(str(node.id), str(node.low.id), **edge_attrs)
+
             if node.high:
                 queue.append(node.high)
-                dot.edge(str(node.id), str(node.high.id),style="solid")
+                edge_attrs = {"style": "solid"}
+                if highlight and getattr(node, "highlight", False) and getattr(node.high, "highlight", False):
+                    edge_attrs["color"] = highlight_fill
+                    edge_attrs["penwidth"] = "3"
+                dot.edge(str(node.id), str(node.high.id), **edge_attrs)
 
-        filename = f'{filename}_'+ ('bdd' if bdd else 'robdd')
+        filename = f'{filename}_' + ('bdd' if is_bdd else 'robdd')
         if not to_latex:
             dot.render(filename, view=False)
         return dot

@@ -13,6 +13,7 @@ def generate_bdd(data: dict = Body(...)):
     graph_type = data.get("graph_type", "robdd")
     var_order = data.get("var_order", None)
     auto_order = data.get("auto_order", None)
+    eval_path = data.get("eval_path", None)
     isROBDD = graph_type == 'robdd'
     if not formula_str:
             return JSONResponse(status_code=400, content={
@@ -42,7 +43,12 @@ def generate_bdd(data: dict = Body(...)):
             })
 
         bdd = BDD_Cache.cache[matched_key]
-        tex_code = bdd2tex(bdd.robdd_root if isROBDD else bdd.root)
+        
+        # Apply evaluation path highlighting if provided
+        if eval_path:
+            bdd.eval_path(bdd.robdd_root if isROBDD else bdd.root, eval_path)
+            
+        tex_code = bdd2tex(bdd.robdd_root if isROBDD else bdd.root, highlight=True)
 
         
         return {
