@@ -1,0 +1,27 @@
+
+\begin{tikzpicture}[>=latex,line join=bevel,scale=0.8, transform shape]
+%%
+\begin{scope}[draw, minimum width=2cm, minimum height=1cm]
+  \node (136) at (75.527bp,234.0bp) [draw,fill=white,ellipse] {$a$};
+  \node (138) at (111.53bp,162.0bp) [draw,fill=white,ellipse] {$b$};
+  \node (137) at (39.527bp,162.0bp) [draw,fill=white,ellipse] {$b$};
+  \node (140) at (111.53bp,90.0bp) [draw,fill=white,ellipse] {$c$};
+  \node (139) at (183.53bp,90.0bp) [draw,fill=white,ellipse] {$c$};
+  \node (141) at (39.527bp,90.0bp) [draw,fill=white,ellipse] {$c$};
+  \node (134) at (39.527bp,18.0bp) [draw,fill=lightgray,rectangle] {$True$};
+  \node (135) at (111.53bp,18.0bp) [draw,fill=lightgray,rectangle] {$False$};
+\end{scope}
+  \draw [->,dashed] (136) ..controls (88.102bp,208.55bp) and (93.335bp,198.37bp)  .. (138);
+  \draw [->,solid] (136) ..controls (62.952bp,208.55bp) and (57.719bp,198.37bp)  .. (137);
+  \draw [->,dashed] (138) ..controls (111.53bp,136.41bp) and (111.53bp,127.73bp)  .. (140);
+  \draw [->,solid] (138) ..controls (136.29bp,136.92bp) and (149.39bp,124.19bp)  .. (139);
+  \draw [->,dashed] (137) ..controls (39.527bp,136.41bp) and (39.527bp,127.73bp)  .. (141);
+  \draw [->,solid] (137) ..controls (17.566bp,136.1bp) and (7.9081bp,122.25bp)  .. (3.5271bp,108.0bp) .. controls (-1.1757bp,92.707bp) and (-1.1757bp,87.293bp)  .. (3.5271bp,72.0bp) .. controls (6.4093bp,62.627bp) and (11.575bp,53.425bp)  .. (134);
+  \draw [->,solid] (140) ..controls (87.638bp,65.775bp) and (75.972bp,54.432bp)  .. (134);
+  \draw [->,dashed] (140) ..controls (111.53bp,64.407bp) and (111.53bp,55.726bp)  .. (135);
+  \draw [->,solid] (139) ..controls (139.6bp,67.645bp) and (104.17bp,50.422bp)  .. (134);
+  \draw [->,dashed] (139) ..controls (159.64bp,65.775bp) and (147.97bp,54.432bp)  .. (135);
+  \draw [->,solid] (141) ..controls (39.527bp,64.407bp) and (39.527bp,55.726bp)  .. (134);
+  \draw [->,dashed] (141) ..controls (63.416bp,65.775bp) and (75.083bp,54.432bp)  .. (135);
+%
+\end{tikzpicture}
