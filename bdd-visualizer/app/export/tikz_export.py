@@ -27,9 +27,10 @@ def bdd2tex(r, file_name='tex', highlight=False):
             crop=False,             
             #straightedges=False,    
             #codeonly = True,
-            nodeoptions='draw, minimum width=2cm, minimum height=1cm',
+            nodeoptions='draw, minimum width=1.25cm, minimum height=0.7cm',
+            edgeoptions='line width=1pt',
             figonly=True, 
-            graphstyle='scale=0.8,>=stealth,thick'
+            graphstyle='scale=0.85,>=stealth,thick,yscale=0.8'
         )
         
         with open(file_name, 'w') as f:
