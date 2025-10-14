@@ -1,26 +1,26 @@
 
-\begin{tikzpicture}[>=latex,line join=bevel,scale=0.85,>=stealth,thick,yscale=0.85]
+\begin{tikzpicture}[>=latex,line join=bevel,scale=0.85,>=stealth,thick,yscale=0.8]
 %%
 \begin{scope}[draw, minimum width=1.25cm, minimum height=0.7cm]
-  \node (43) at (117.0bp,486.0bp) [draw,fill=red!50,circle] {$b$};
-  \node (41) at (54.0bp,342.0bp) [draw,fill=blue!30,circle] {$d$};
-  \node (42) at (180.0bp,342.0bp) [draw,fill=red!50,circle] {$a$};
-  \node (39) at (95.0bp,198.0bp) [draw,fill=blue!30,circle] {$c$};
-  \node (30) at (95.0bp,54.0bp) [draw,fill=red!50,rectangle] {$True$};
-  \node (40) at (221.0bp,198.0bp) [draw,fill=red!50,circle] {$d$};
-  \node (31) at (221.0bp,54.0bp) [draw,fill=red!50,rectangle] {$False$};
+  \node (40) at (158.0bp,774.0bp) [draw,fill=blue!30,circle] {$a$};
+  \node (38) at (117.0bp,486.0bp) [draw,fill=blue!30,circle] {$c$};
+  \node (39) at (199.0bp,630.0bp) [draw,fill=blue!30,circle] {$b$};
+  \node (29) at (54.0bp,54.0bp) [draw,fill=blue!50,circle] {$False$};
+  \node (37) at (117.0bp,342.0bp) [draw,fill=blue!30,circle] {$d$};
+  \node (28) at (199.0bp,54.0bp) [draw,fill=blue!50,circle] {$True$};
+  \node (36) at (136.0bp,198.0bp) [draw,fill=blue!30,circle] {$e$};
 \end{scope}
 \begin{scope}[line width=1pt]
-  \draw [->,dashed] (43) ..controls (90.468bp,425.2bp) and (85.272bp,413.49bp)  .. (41);
-  \draw [red!50,->,solid] (43) ..controls (143.14bp,426.09bp) and (147.88bp,415.39bp)  .. (42);
-  \draw [->,dashed] (41) ..controls (71.473bp,280.48bp) and (74.284bp,270.75bp)  .. (39);
-  \draw [->,solid] (41) ..controls (26.195bp,250.01bp) and (16.664bp,192.21bp)  .. (32.0bp,144.0bp) .. controls (34.846bp,135.05bp) and (38.954bp,126.23bp)  .. (30);
-  \draw [->,solid] (42) ..controls (144.83bp,282.24bp) and (136.23bp,267.88bp)  .. (39);
-  \draw [red!50,->,dashed] (42) ..controls (197.21bp,281.39bp) and (199.74bp,272.65bp)  .. (40);
-  \draw [->,solid] (39) ..controls (95.0bp,135.8bp) and (95.0bp,127.57bp)  .. (30);
-  \draw [->,dashed] (39) ..controls (141.52bp,144.57bp) and (154.04bp,130.47bp)  .. (31);
-  \draw [red!50,->,dashed] (40) ..controls (175.1bp,145.28bp) and (163.38bp,132.06bp)  .. (30);
-  \draw [red!50,->,solid] (40) ..controls (221.0bp,136.8bp) and (221.0bp,129.65bp)  .. (31);
+  \draw [->,dashed] (40) ..controls (140.95bp,709.28bp) and (138.09bp,696.24bp)  .. (136.0bp,684.0bp) .. controls (128.49bp,640.07bp) and (123.72bp,590.09bp)  .. (38);
+  \draw [->,solid] (40) ..controls (175.47bp,712.48bp) and (178.28bp,702.75bp)  .. (39);
+  \draw [->,dashed] (38) ..controls (70.326bp,430.82bp) and (59.747bp,413.64bp)  .. (54.0bp,396.0bp) .. controls (23.775bp,303.22bp) and (32.47bp,188.56bp)  .. (29);
+  \draw [->,solid] (38) ..controls (117.0bp,423.8bp) and (117.0bp,415.57bp)  .. (37);
+  \draw [->,dashed] (39) ..controls (165.07bp,570.25bp) and (157.07bp,556.39bp)  .. (38);
+  \draw [->,solid] (39) ..controls (199.0bp,469.64bp) and (199.0bp,233.72bp)  .. (28);
+  \draw [->,dashed] (37) ..controls (83.509bp,281.32bp) and (77.11bp,266.42bp)  .. (73.0bp,252.0bp) .. controls (60.726bp,208.93bp) and (56.025bp,158.66bp)  .. (29);
+  \draw [->,solid] (37) ..controls (125.16bp,279.99bp) and (126.3bp,271.52bp)  .. (36);
+  \draw [->,dashed] (36) ..controls (102.07bp,138.25bp) and (94.072bp,124.39bp)  .. (29);
+  \draw [->,solid] (36) ..controls (162.53bp,137.2bp) and (167.73bp,125.49bp)  .. (28);
 \end{scope}
 %
 \end{tikzpicture}

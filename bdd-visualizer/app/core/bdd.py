@@ -198,7 +198,7 @@ class BDD:
 
         # FIX 1: Set global node attributes to enforce shape and size consistently.
         dot.node_attr.update(
-            shape='rect',  # default for normal nodes
+            shape='circle',  # default for normal nodes
             style='filled',
             fontsize='16',
             width='1.5',
@@ -229,7 +229,7 @@ class BDD:
                     str(node.id),
                     label=label,
                     fillcolor=fillcolor,
-                    _attributes={'shape': 'rect',
+                    _attributes={'shape': 'circle',
                                 'fontsize': '16',
                                  'width': '1.5',
                                  'height': '1.5',
