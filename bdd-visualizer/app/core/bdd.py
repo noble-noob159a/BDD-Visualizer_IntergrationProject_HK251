@@ -256,8 +256,7 @@ class BDD:
                 dot.edge(str(node.id), str(node.high.id), **edge_attrs)
 
         filename = f'{filename}_' + ('bdd' if is_bdd else 'robdd')
-        if not to_latex:
-            dot.render(filename, view=False)
+        dot.render(filename, view=False)
         return dot
     
 

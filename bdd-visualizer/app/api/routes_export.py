@@ -48,7 +48,7 @@ def generate_bdd(data: dict = Body(...)):
         if eval_path:
             bdd.eval_path(bdd.robdd_root if isROBDD else bdd.root, eval_path)
             
-        tex_code = bdd2tex(bdd.robdd_root if isROBDD else bdd.root, highlight=True)
+        tex_code = bdd2tex(bdd.robdd_root if isROBDD else bdd.root,highlight=eval_path is not None)
 
         
         return {

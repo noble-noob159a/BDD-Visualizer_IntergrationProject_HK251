@@ -26,12 +26,16 @@ def generate_bdd(data: dict = Body(...)):
         formula_str = formula_str.replace(" ", "")
         isROBDD = graph_type == 'robdd'
 
-        # Build cache key that includes ordering info so different orders do not collide
-        cache_key = f"{formula_str}|var_order={var_order or ''}|auto_order={auto_order or ''}"
+
+        cache_key = f"{formula_str}"
 
         if cache_key in BDD_Cache.cache:
             logger.info(f"Cache hit for {cache_key}")
             bdd = BDD_Cache.cache[cache_key]
+            if var_order:
+                bdd.var_name =get_var_order(bdd.var_name,var_order)
+            else:
+                bdd.var_name = get_var_name(formula_str)
         else:
             bdd = BDD(formula_str, var_order)
             BDD_Cache.add_to_cache(cache_key, bdd)
@@ -43,10 +47,7 @@ def generate_bdd(data: dict = Body(...)):
         else:
             bdd.build_bdd()
 
-        highlight = None
         if eval_path:
-            highlight =True
-            #logger.info(f"eval with {eval_path}?")
             bdd.eval_path(bdd.robdd_root if isROBDD else bdd.root, eval_path)
 
         #logger.info(f"Cache: {BDD_Cache.cache}")

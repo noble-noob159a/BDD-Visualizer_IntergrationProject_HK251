@@ -23,12 +23,13 @@ def bdd2tex(r, file_name='tex', highlight=False):
             xdot_content,
             format='tikz',          
             texmode='math',        
-            #duplicate=True,        
+            duplicate=True,        
             crop=False,             
-            straightedges=False,    
+            #straightedges=False,    
             #codeonly = True,
+            nodeoptions='draw, minimum width=2cm, minimum height=1cm',
             figonly=True, 
-            graphstyle='scale=0.8, transform shape'
+            graphstyle='scale=0.8,>=stealth,thick'
         )
         
         with open(file_name, 'w') as f:
