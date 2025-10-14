@@ -1,6 +1,7 @@
 
 \begin{tikzpicture}[>=latex,line join=bevel,scale=0.85,>=stealth,thick,yscale=0.8]
 %%
+<<<<<<< HEAD
 \begin{scope}[draw, minimum width=1.25cm, minimum height=0.7cm]
   \node (40) at (158.0bp,774.0bp) [draw,fill=blue!30,circle] {$a$};
   \node (38) at (117.0bp,486.0bp) [draw,fill=blue!30,circle] {$c$};
@@ -21,6 +22,22 @@
   \draw [->,solid] (37) ..controls (125.16bp,279.99bp) and (126.3bp,271.52bp)  .. (36);
   \draw [->,dashed] (36) ..controls (102.07bp,138.25bp) and (94.072bp,124.39bp)  .. (29);
   \draw [->,solid] (36) ..controls (162.53bp,137.2bp) and (167.73bp,125.49bp)  .. (28);
+=======
+\begin{scope}[draw, minimum width=1cm, minimum height=0.8cm]
+  \node (36) at (77.0bp,174.0bp) [draw,fill=blue!30,circle] {$a$};
+  \node (34) at (59.0bp,72.4bp) [draw,fill=blue!30,circle] {$c$};
+  \node (35) at (95.0bp,123.2bp) [draw,fill=blue!30,circle] {$b$};
+  \node (29) at (27.0bp,18.0bp) [draw,fill=blue!50,rectangle] {$False$};
+  \node (28) at (95.0bp,18.0bp) [draw,fill=blue!50,rectangle] {$True$};
+\end{scope}
+\begin{scope}[line width=1pt]
+  \draw [->,dashed] (36) ..controls (71.741bp,143.9bp) and (67.001bp,117.67bp)  .. (34);
+  \draw [->,solid] (36) ..controls (83.218bp,156.14bp) and (84.784bp,151.9bp)  .. (35);
+  \draw [->,dashed] (34) ..controls (49.242bp,55.422bp) and (46.337bp,50.664bp)  .. (29);
+  \draw [->,solid] (34) ..controls (69.81bp,55.665bp) and (73.371bp,50.482bp)  .. (28);
+  \draw [->,dashed] (35) ..controls (82.925bp,105.83bp) and (78.416bp,99.719bp)  .. (34);
+  \draw [->,solid] (35) ..controls (95.0bp,93.252bp) and (95.0bp,67.49bp)  .. (28);
+>>>>>>> 2f4a31ddaf99b9d91acf638baa83e76846cab7cd
 \end{scope}
 %
 \end{tikzpicture}
