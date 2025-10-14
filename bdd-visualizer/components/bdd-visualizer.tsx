@@ -605,6 +605,64 @@ export default function BDDVisualizer() {
     }
   }
 
+  const handleExportJSON = async () => {
+    if (!formula) return
+
+    try {
+      const requestBody: any = {
+        formula: formula,
+        graph_type: graphType,
+      };
+
+      // Add variable ordering if specified
+      if (orderingMethod === "custom" && customOrder.trim()) {
+        requestBody.var_order = customOrder.trim();
+      } else if (orderingMethod === "auto") {
+        requestBody.auto_order = "ls"; // Use local sifting for auto ordering
+      }
+
+      // Add variable values for evaluation path if enabled
+      if (showEvalPath && Object.keys(variableValues).length > 0) {
+        const evalPathStr = Object.entries(variableValues)
+          .filter(([_, value]) => value !== undefined)
+          .map(([variable, value]) => `${variable}:${value}`)
+          .join(' ');
+
+        if (evalPathStr) {
+          requestBody.eval_path = evalPathStr;
+        }
+      }
+
+      const response = await fetch("/api/export-json", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      })
+
+      const data = await response.json()
+
+      if (data.status === "error") {
+        setError(data.message)
+        return
+      }
+
+      if (!data.json) {
+        setError("JSON content is missing in the response")
+        return
+      }
+
+      const blob = new Blob([JSON.stringify(data.json, null, 2)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `bdd-${formula.replace(/[^a-zA-Z0-9]/g, "_")}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError("Failed to export JSON. Make sure the API is running.")
+    }
+  }
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -821,6 +879,9 @@ export default function BDDVisualizer() {
                 </button>
                 <button onClick={handleExportTikZ} className={styles.exportButton}>
                   Export as TikZ (LaTeX)
+                </button>
+                <button onClick={handleExportJSON} className={styles.exportButton}>
+                  Export as JSON
                 </button>
               </div>
             </div>

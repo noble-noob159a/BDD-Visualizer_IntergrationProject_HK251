@@ -187,8 +187,8 @@ class BDD:
         if root is None:
             raise ValueError("Null root")
         
-        default_fill = 'white' if to_latex else '#90caf9'
-        highlight_fill = 'blue!30'
+        default_fill = 'blue!30' if to_latex else '#90caf9'
+        highlight_fill = 'red!50'
 
         if to_latex:
             show_expr = False
@@ -198,12 +198,12 @@ class BDD:
 
         # FIX 1: Set global node attributes to enforce shape and size consistently.
         dot.node_attr.update(
-            shape='rectangle',
+            shape='rect',  # default for normal nodes
             style='filled',
+            fontsize='16',
+            width='1.5',
+            height='1.5',
             fixedsize='true',
-            width='1.2',
-            height='0.6',
-            fontsize='12'
         )
 
         visited = set()
@@ -221,10 +221,20 @@ class BDD:
 
             if node.var is None:
                 label = str(node.expr)
-                fillcolor = "lightgray"
+                fillcolor = "blue!50"
                 if highlight and node.highlight:
                     fillcolor = highlight_fill
-                dot.node(str(node.id), label=label, fillcolor=fillcolor)
+                # force rectangle for terminal nodes
+                dot.node(
+                    str(node.id),
+                    label=label,
+                    fillcolor=fillcolor,
+                    _attributes={'shape': 'rect',
+                                'fontsize': '16',
+                                 'width': '1.5',
+                                 'height': '1.5',
+                                 'fixedsize': 'true',}
+                )
             else:
                 # FIX 2: Sanitize the expression string to remove any problematic characters.
                 clean_expr_str = getattr(node, "expr_str", "") or ""
@@ -237,7 +247,16 @@ class BDD:
                 fillcolor = default_fill
                 if highlight and node.highlight:
                     fillcolor = highlight_fill
-                dot.node(str(node.id), label=label, fillcolor=fillcolor)
+                dot.node(
+                    str(node.id),
+                    label=label,
+                    fillcolor=fillcolor,
+                    _attributes={'shape': 'circle',
+                                'fontsize': '16',
+                                 'width': '1.5',
+                                 'height': '1.5',
+                                 'fixedsize': 'true',}
+                )
             
             if node.low:
                 queue.append(node.low)
