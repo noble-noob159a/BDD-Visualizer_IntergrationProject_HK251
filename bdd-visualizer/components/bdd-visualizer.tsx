@@ -30,6 +30,11 @@ export default function BDDVisualizer() {
   const [formula, setFormula] = useState("a&b|c")
   const [graphType, setGraphType] = useState<"bdd" | "robdd">("robdd")
   const [bddData, setBddData] = useState<BDDData | null>(null)
+  const [layout, setLayout] = useState<null | {
+    bbox: { width: number; height: number }
+    nodes_json?: Record<string, { x: number; y: number; w: number; h: number }>
+    edges_json?: Array<{ tail: string; head: string; points: Array<[number, number]>; style: string }>
+  }>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentStep, setCurrentStep] = useState(0)
@@ -41,7 +46,14 @@ export default function BDDVisualizer() {
   const [variableValues, setVariableValues] = useState<Record<string, number>>({})
   const [showEvalPath, setShowEvalPath] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const canvasContainerRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<number | null>(null)
+  
+  // Zoom and pan state
+  const [scale, setScale] = useState(1)
+  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
 
   const handleVisualize = async () => {
     setLoading(true)
@@ -91,6 +103,26 @@ export default function BDDVisualizer() {
       setBddData(data.graph)
       setVariables(data.graph.variables || [])
       generateSteps(data.graph)
+
+      // Fetch Graphviz layout to match LaTeX/TikZ output
+      try {
+        const layoutRes = await fetch("/api/export-layout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        })
+        const layoutData = await layoutRes.json()
+        if (layoutData.status !== "error" && layoutData.layout) {
+          setLayout(layoutData.layout)
+          // Fit view to layout on first load
+          window.setTimeout(() => fitViewToLayout(layoutData.layout), 0)
+        } else {
+          setLayout(null)
+        }
+      } catch (e) {
+        // Non-fatal; fallback to client layout
+        setLayout(null)
+      }
     } catch (err) {
       setError("Failed to connect to backend. Make sure the API is running.")
     } finally {
@@ -173,8 +205,14 @@ export default function BDDVisualizer() {
     if (!ctx) return
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    
+    // Apply zoom and pan transformations
+    ctx.save()
+    ctx.translate(offset.x, offset.y)
+    ctx.scale(scale, scale)
 
-    const nodePositions = calculateNodePositions(bddData)
+    const hasGV = !!layout && !!layout.nodes_json && !!layout.bbox
+    const nodePositions = hasGV ? calculateNodePositionsFromGV(bddData, layout!) : calculateNodePositions(bddData)
 
     // Build visible nodes set: union of all added ids up to current step
     const visibleNodes = new Set<string>()
@@ -203,74 +241,159 @@ export default function BDDVisualizer() {
     }
     expandVisible(visibleNodes)
 
+    // Helper to draw an arrowhead at (x,y) pointing at angle
+    const drawArrowhead = (
+      ctx: CanvasRenderingContext2D,
+      x: number,
+      y: number,
+      angle: number,
+      size = 14
+    ) => {
+      ctx.save()
+      ctx.translate(x, y)
+      ctx.rotate(angle)
+      ctx.beginPath()
+      ctx.moveTo(0, 0)
+      ctx.lineTo(-size, size * 0.6)
+      ctx.lineTo(-size, -size * 0.6)
+      ctx.closePath()
+      ctx.fill()
+      ctx.restore()
+    }
+
     // draw edges first
-    Object.values(bddData.nodes).forEach((node) => {
-      if (!visibleNodes.has(node.id)) return
+    const hash = (s: string) => {
+      let h = 0
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
+      return h
+    }
+    if (hasGV && layout?.edges_json) {
+      // Draw using Graphviz polylines
+      layout.edges_json.forEach((e) => {
+        const tail = e.tail
+        const head = e.head
+        if (!visibleNodes.has(tail) || !visibleNodes.has(head)) return
+        const pts = e.points.map(([x, y]) => ({ x, y: (layout!.bbox.height - y) }))
+        const isDashed = e.style === "dashed"
+        const isHighlighted = (() => {
+          const tailNode = bddData.nodes[tail]
+          const headNode = bddData.nodes[head]
+          return (tailNode && (tailNode.highlight === true || tailNode.highlight === 1)) &&
+                 (headNode && (headNode.highlight === true || headNode.highlight === 1))
+        })()
 
-      const pos = nodePositions[node.id]
-      if (!pos) return
-
-      const isNodeHighlighted = node.highlight === true || node.highlight === 1
-
-      if (node.low && visibleNodes.has(node.low)) {
-        const lowPos = nodePositions[node.low]
-        if (lowPos) {
-          const lowNode = bddData.nodes[node.low]
-          const isLowHighlighted = lowNode && (lowNode.highlight === true || lowNode.highlight === 1)
-          const isEdgeHighlighted = isNodeHighlighted && isLowHighlighted
-          
-          ctx.save()
-          ctx.setLineDash([5, 5])
-          
-          if (isEdgeHighlighted) {
-            // Highlighted low edge (dashed)
-            ctx.strokeStyle = "#ff5722"
-            ctx.lineWidth = 4
-            ctx.shadowColor = "#ff5722"
-            ctx.shadowBlur = 10
-          } else {
-            // Normal low edge (dashed)
-            ctx.strokeStyle = "#666"
-            ctx.lineWidth = 2
-          }
-          
-          ctx.beginPath()
-          ctx.moveTo(pos.x, pos.y + 25)
-          ctx.lineTo(lowPos.x, lowPos.y - 25)
-          ctx.stroke()
-          ctx.restore()
+        ctx.save()
+        ctx.setLineDash(isDashed ? [5, 5] : [])
+        if (isHighlighted) {
+          ctx.strokeStyle = "#ff5722"
+          ctx.lineWidth = 3.5
+          ctx.shadowColor = "#ff5722"
+          ctx.shadowBlur = 10
+        } else {
+          ctx.strokeStyle = isDashed ? "#666" : "#333"
+          ctx.lineWidth = 2
         }
-      }
-
-      if (node.high && visibleNodes.has(node.high)) {
-        const highPos = nodePositions[node.high]
-        if (highPos) {
-          const highNode = bddData.nodes[node.high]
-          const isHighHighlighted = highNode && (highNode.highlight === true || highNode.highlight === 1)
-          const isEdgeHighlighted = isNodeHighlighted && isHighHighlighted
-          
-          ctx.save()
-          
-          if (isEdgeHighlighted) {
-            // Highlighted high edge (solid)
-            ctx.strokeStyle = "#ff5722"
-            ctx.lineWidth = 4
-            ctx.shadowColor = "#ff5722"
-            ctx.shadowBlur = 10
-          } else {
-            // Normal high edge (solid)
-            ctx.strokeStyle = "#333"
-            ctx.lineWidth = 2
-          }
-          
-          ctx.beginPath()
-          ctx.moveTo(pos.x, pos.y + 25)
-          ctx.lineTo(highPos.x, highPos.y - 25)
-          ctx.stroke()
-          ctx.restore()
+        ctx.beginPath()
+        for (let i = 0; i < pts.length; i++) {
+          const p = pts[i]
+          if (i === 0) ctx.moveTo(p.x, p.y)
+          else ctx.lineTo(p.x, p.y)
         }
-      }
-    })
+        ctx.stroke()
+        // Arrowhead towards last segment
+        if (pts.length >= 2) {
+          const p1 = pts[pts.length - 2]
+          const p2 = pts[pts.length - 1]
+          ctx.setLineDash([])
+          ctx.fillStyle = ctx.strokeStyle
+          const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x)
+          drawArrowhead(ctx, p2.x, p2.y, angle)
+        }
+        ctx.restore()
+      })
+    } else {
+      // Fallback: draw synthetic curves
+      Object.values(bddData.nodes).forEach((node) => {
+        if (!visibleNodes.has(node.id)) return
+        const pos = nodePositions[node.id]
+        if (!pos) return
+        const isNodeHighlighted = node.highlight === true || node.highlight === 1
+        if (node.low && visibleNodes.has(node.low)) {
+          const lowPos = nodePositions[node.low]
+          if (lowPos) {
+            const lowNode = bddData.nodes[node.low]
+            const isLowHighlighted = lowNode && (lowNode.highlight === true || lowNode.highlight === 1)
+            const isEdgeHighlighted = isNodeHighlighted && isLowHighlighted
+            ctx.save()
+            ctx.setLineDash([5, 5])
+            if (isEdgeHighlighted) {
+              ctx.strokeStyle = "#ff5722"
+              ctx.lineWidth = 3.5
+              ctx.shadowColor = "#ff5722"
+              ctx.shadowBlur = 10
+            } else {
+              ctx.strokeStyle = "#666"
+              ctx.lineWidth = 2
+            }
+            const fromIsTerminal = node.var === null
+            const toIsTerminal = lowNode?.var === null
+            const x1 = pos.x
+            const y1 = pos.y + (fromIsTerminal ? 10 : 15)
+            const x2 = lowPos.x
+            const y2 = lowPos.y - (toIsTerminal ? 10 : 15)
+            const mx = (x1 + x2) / 2
+            const my = (y1 + y2) / 2
+            const dx = x2 - x1
+            const curve = Math.max(80, Math.min(260, Math.abs(dx) * 0.6 + 100))
+            const j = ((hash(node.id + ":" + node.low) % 21) - 10) * 4
+            const cx = mx - (curve + j)
+            const cy = my + j * 0.2
+            if (Math.abs(dx) < 20) {
+              ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke()
+            } else {
+              ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx, cy, x2, y2); ctx.stroke()
+            }
+            ctx.setLineDash([])
+            ctx.fillStyle = ctx.strokeStyle
+            const angle = Math.abs(dx) < 20 ? Math.atan2(y2 - y1, x2 - x1) : Math.atan2(y2 - cy, x2 - cx)
+            drawArrowhead(ctx, x2, y2, angle)
+            ctx.restore()
+          }
+        }
+        if (node.high && visibleNodes.has(node.high)) {
+          const highPos = nodePositions[node.high]
+          if (highPos) {
+            const highNode = bddData.nodes[node.high]
+            const isHighHighlighted = highNode && (highNode.highlight === true || highNode.highlight === 1)
+            const isEdgeHighlighted = isNodeHighlighted && isHighHighlighted
+            ctx.save()
+            ctx.setLineDash([])
+            if (isEdgeHighlighted) {
+              ctx.strokeStyle = "#ff5722"; ctx.lineWidth = 3.5; ctx.shadowColor = "#ff5722"; ctx.shadowBlur = 10
+            } else { ctx.strokeStyle = "#333"; ctx.lineWidth = 2 }
+            const fromIsTerminal = node.var === null
+            const toIsTerminal = highNode?.var === null
+            const x1 = pos.x
+            const y1 = pos.y + (fromIsTerminal ? 10 : 15)
+            const x2 = highPos.x
+            const y2 = highPos.y - (toIsTerminal ? 10 : 15)
+            const mx = (x1 + x2) / 2
+            const my = (y1 + y2) / 2
+            const dx = x2 - x1
+            const curve = Math.max(80, Math.min(260, Math.abs(dx) * 0.6 + 100))
+            const j = ((hash(node.id + ":" + node.high) % 21) - 10) * 4
+            const cx = mx + (curve + j)
+            const cy = my + j * 0.2
+            if (Math.abs(dx) < 20) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke() }
+            else { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx, cy, x2, y2); ctx.stroke() }
+            ctx.fillStyle = ctx.strokeStyle
+            const angle = Math.abs(dx) < 20 ? Math.atan2(y2 - y1, x2 - x1) : Math.atan2(y2 - cy, x2 - cx)
+            drawArrowhead(ctx, x2, y2, angle)
+            ctx.restore()
+          }
+        }
+      })
+    }
 
     // draw nodes; newly added nodes are highlighted with a different color
     const currentAdded = new Set<string>((steps[stepIndex]?.addedNodeIds) || [])
@@ -294,14 +417,28 @@ export default function BDDVisualizer() {
         ctx.fillStyle = isCurrentAdded ? "#ffeb3b" : (isOne ? "#81c784" : "#e57373")
         ctx.strokeStyle = isHighlighted ? "#ff5722" : "#333"
         ctx.lineWidth = isHighlighted ? 4 : 2
-        ctx.fillRect(pos.x - 40, pos.y - 20, 80, 40)
-        ctx.strokeRect(pos.x - 40, pos.y - 20, 80, 40)
+        const w = (() => {
+          if (layout?.nodes_json && layout?.bbox) {
+            const g = layout.nodes_json[node.id]
+            if (g) return g.w
+          }
+          return 40
+        })()
+        const h = (() => {
+          if (layout?.nodes_json && layout?.bbox) {
+            const g = layout.nodes_json[node.id]
+            if (g) return g.h
+          }
+          return 20
+        })()
+        ctx.fillRect(pos.x - w / 2, pos.y - h / 2, w, h)
+        ctx.strokeRect(pos.x - w / 2, pos.y - h / 2, w, h)
         
         // Add glow effect for highlighted nodes
         if (isHighlighted) {
           ctx.shadowColor = "#ff5722";
           ctx.shadowBlur = 15;
-          ctx.strokeRect(pos.x - 40, pos.y - 20, 80, 40);
+          ctx.strokeRect(pos.x - w / 2, pos.y - h / 2, w, h);
           ctx.shadowBlur = 0;
         }
       } else {
@@ -310,7 +447,14 @@ export default function BDDVisualizer() {
         ctx.strokeStyle = isHighlighted ? "#ff5722" : "#333"
         ctx.lineWidth = isHighlighted ? 4 : 2
         ctx.beginPath()
-        ctx.arc(pos.x, pos.y, 30, 0, Math.PI * 2)
+        const r = (() => {
+          if (layout?.nodes_json && layout?.bbox) {
+            const g = layout.nodes_json[node.id]
+            if (g) return Math.max(g.w, g.h) / 2
+          }
+          return 15
+        })()
+        ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2)
         ctx.fill()
         ctx.stroke()
         
@@ -319,7 +463,7 @@ export default function BDDVisualizer() {
           ctx.shadowColor = "#ff5722";
           ctx.shadowBlur = 15;
           ctx.beginPath();
-          ctx.arc(pos.x, pos.y, 30, 0, Math.PI * 2);
+          ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
           ctx.stroke();
           ctx.shadowBlur = 0;
         }
@@ -333,46 +477,254 @@ export default function BDDVisualizer() {
 
       ctx.restore()
     })
+    
+    // Restore the canvas context state after drawing
+    ctx.restore()
   }
 
   const calculateNodePositions = (data: BDDData): Record<string, { x: number; y: number }> => {
     const positions: Record<string, { x: number; y: number }> = {}
-    const levelNodes: Record<number, string[]> = {}
-
-    Object.values(data.nodes).forEach((node) => {
-      if (!levelNodes[node.level]) {
-        levelNodes[node.level] = []
+    const hash = (s: string) => {
+      let h = 0
+      for (let i = 0; i < s.length; i++) {
+        h = (h * 31 + s.charCodeAt(i)) | 0
       }
+      return h
+    }
+
+    const levelNodes: Record<number, string[]> = {}
+    Object.values(data.nodes).forEach((node) => {
+      if (!levelNodes[node.level]) levelNodes[node.level] = []
       levelNodes[node.level].push(node.id)
     })
 
     const canvas = canvasRef.current
     if (!canvas) return positions
 
-    const width = canvas.width
-    const height = canvas.height
-    const levels = Object.keys(levelNodes).length
-    const verticalSpacing = height / (levels + 1)
+    const CENTER_X = canvas.width / 2
+    const TOP_PADDING = 80
+    const LEVEL_GAP = 140
+    const NODE_GAP = 160
+    const MIN_GAP = NODE_GAP * 0.8
+    const EDGE_OFFSET = NODE_GAP * 0.95
 
-    Object.entries(levelNodes).forEach(([level, nodeIds]) => {
-      const levelNum = Number.parseInt(level)
-      const y = verticalSpacing * (levelNum + 1)
-      const horizontalSpacing = width / (nodeIds.length + 1)
+    const levels = Object.keys(levelNodes)
+      .map((l) => parseInt(l, 10))
+      .sort((a, b) => a - b)
+    if (levels.length === 0) return positions
+    const minLevel = levels[0]
 
-      nodeIds.forEach((nodeId, index) => {
-        const x = horizontalSpacing * (index + 1)
-        positions[nodeId] = { x, y }
-      })
+    const parents: Record<string, string[]> = {}
+    const children: Record<string, string[]> = {}
+    Object.values(data.nodes).forEach((n) => {
+      if (n.low) {
+        parents[n.low] = parents[n.low] || []
+        parents[n.low].push(n.id)
+        children[n.id] = children[n.id] || []
+        children[n.id].push(n.low)
+      }
+      if (n.high) {
+        parents[n.high] = parents[n.high] || []
+        parents[n.high].push(n.id)
+        children[n.id] = children[n.id] || []
+        children[n.id].push(n.high)
+      }
     })
 
+    const order: Record<number, string[]> = {}
+    levels.forEach((lvl) => {
+      order[lvl] = [...levelNodes[lvl]].sort((a, b) => a.localeCompare(b))
+    })
+
+    const yOf = (lvl: number) => TOP_PADDING + (lvl - minLevel) * LEVEL_GAP
+
+    const assignPositionsFromOrder = () => {
+      levels.forEach((lvl) => {
+        const ids = order[lvl]
+        const y = yOf(lvl)
+        if (!ids || ids.length === 0) return
+        const count = ids.length
+        const totalWidth = (count - 1) * NODE_GAP
+        const startX = CENTER_X - totalWidth / 2
+        ids.forEach((id, idx) => {
+          positions[id] = { x: startX + idx * NODE_GAP, y }
+        })
+      })
+    }
+
+    const sortByBarycenter = (ids: string[], getNeighbors: (id: string) => string[]): string[] => {
+      return ids
+        .map((id, idx) => {
+          const neigh = getNeighbors(id) || []
+          let sum = 0
+          let count = 0
+          neigh.forEach((nid) => {
+            const p = positions[nid]
+            if (p) {
+              sum += p.x
+              count += 1
+            }
+          })
+          const bc = count > 0 ? sum / count : Number.POSITIVE_INFINITY
+          return { id, bc, idx }
+        })
+        .sort((a, b) => {
+          if (a.bc === b.bc) return a.idx - b.idx
+          return a.bc - b.bc
+        })
+        .map((x) => x.id)
+    }
+
+    assignPositionsFromOrder()
+
+    for (let iter = 0; iter < 2; iter++) {
+      for (let lvlIdx = 1; lvlIdx < levels.length; lvlIdx++) {
+        const lvl = levels[lvlIdx]
+        const ids = order[lvl]
+        order[lvl] = sortByBarycenter(ids, (id) => parents[id] || [])
+        assignPositionsFromOrder()
+      }
+      for (let lvlIdx = levels.length - 2; lvlIdx >= 0; lvlIdx--) {
+        const lvl = levels[lvlIdx]
+        const ids = order[lvl]
+        order[lvl] = sortByBarycenter(ids, (id) => children[id] || [])
+        assignPositionsFromOrder()
+      }
+    }
+
+    assignPositionsFromOrder()
+
+    const applyConstraints = () => {
+      levels.forEach((lvl) => {
+        const ids = order[lvl]
+        if (!ids || ids.length === 0) return
+
+        ids.forEach((id) => {
+          const pos = positions[id]
+          if (!pos) return
+          const ps = parents[id] || []
+          let minBound = -Infinity
+          let maxBound = Infinity
+
+          ps.forEach((pid) => {
+            const parentPos = positions[pid]
+            if (!parentPos) return
+            const parent = data.nodes[pid]
+            const depth = Math.max(1, lvl - parent.level)
+            const bias = EDGE_OFFSET * (1 + 0.25 * (depth - 1))
+            if (parent.high === id) {
+              minBound = Math.max(minBound, parentPos.x + bias)
+            }
+            if (parent.low === id) {
+              maxBound = Math.min(maxBound, parentPos.x - bias)
+            }
+          })
+
+          let x = pos.x
+          if (minBound > -Infinity && maxBound < Infinity && minBound > maxBound) {
+            const mid = (minBound + maxBound) / 2
+            minBound = mid
+            maxBound = mid
+          }
+          if (minBound > -Infinity && x < minBound) x = minBound
+          if (maxBound < Infinity && x > maxBound) x = maxBound
+
+          if (ps.length > 0 && (!isFinite(minBound) || !isFinite(maxBound))) {
+            const balance = ps.reduce((acc, pid) => {
+              const parent = data.nodes[pid]
+              if (parent.high === id && parent.low !== id) return acc + NODE_GAP * 0.05
+              if (parent.low === id && parent.high !== id) return acc - NODE_GAP * 0.05
+              return acc
+            }, 0)
+            x += balance
+          }
+
+          positions[id] = { x, y: pos.y }
+        })
+
+        // Left-to-right separation
+        for (let i = 1; i < ids.length; i++) {
+          const prev = positions[ids[i - 1]]
+          const curr = positions[ids[i]]
+          if (!prev || !curr) continue
+          if (curr.x < prev.x + MIN_GAP) {
+            curr.x = prev.x + MIN_GAP
+          }
+        }
+
+        // Right-to-left separation
+        for (let i = ids.length - 2; i >= 0; i--) {
+          const next = positions[ids[i + 1]]
+          const curr = positions[ids[i]]
+          if (!next || !curr) continue
+          if (curr.x > next.x - MIN_GAP) {
+            curr.x = next.x - MIN_GAP
+          }
+        }
+      })
+    }
+
+    // Multiple passes to satisfy constraints with updated parent positions
+    for (let iter = 0; iter < 3; iter++) {
+      applyConstraints()
+    }
+
+    let minX = Infinity
+    let maxX = -Infinity
+    Object.values(positions).forEach((pos) => {
+      if (pos.x < minX) minX = pos.x
+      if (pos.x > maxX) maxX = pos.x
+    })
+
+    if (isFinite(minX) && isFinite(maxX)) {
+      const mid = (minX + maxX) / 2
+      const shift = CENTER_X - mid
+      Object.values(positions).forEach((pos) => {
+        pos.x += shift
+      })
+    }
+
     return positions
+  }
+
+  // Use Graphviz layout coordinates (matching LaTeX) if available
+  const calculateNodePositionsFromGV = (data: BDDData, layoutData: NonNullable<typeof layout>): Record<string, { x: number; y: number }> => {
+    const positions: Record<string, { x: number; y: number }> = {}
+    if (!layoutData.nodes_json || !layoutData.bbox) return positions
+    const H = layoutData.bbox.height
+    Object.values(data.nodes).forEach((node) => {
+      const geom = layoutData.nodes_json![node.id]
+      if (!geom) return
+      const x = geom.x
+      const y = H - geom.y // flip Y to canvas coordinates
+      positions[node.id] = { x, y }
+    })
+    return positions
+  }
+
+  const fitViewToLayout = (layoutData: NonNullable<typeof layout>) => {
+    const canvas = canvasRef.current
+    if (!canvas || !layoutData?.bbox) return
+    const cw = canvas.width
+    const ch = canvas.height
+    const lw = Math.max(1, layoutData.bbox.width)
+    const lh = Math.max(1, layoutData.bbox.height)
+    const margin = 40
+    const scaleX = (cw - margin * 2) / lw
+    const scaleY = (ch - margin * 2) / lh
+    const s = Math.max(0.1, Math.min(4, Math.min(scaleX, scaleY)))
+    setScale(s)
+    // center
+    const ox = (cw - lw * s) / 2
+    const oy = (ch - lh * s) / 2
+    setOffset({ x: ox, y: oy })
   }
 
   useEffect(() => {
     if (bddData && steps.length > 0) {
       drawBDD(currentStep)
     }
-  }, [bddData, currentStep, steps])
+  }, [bddData, currentStep, steps, scale, offset])
 
   useEffect(() => {
     if (isPlaying && currentStep < steps.length - 1) {
@@ -428,14 +780,14 @@ export default function BDDVisualizer() {
   }
 
   const handleExportSVG = () => {
-      if (!bddData) return
+    if (!bddData) return
 
-      const nodePositions = calculateNodePositions(bddData)
-      const visibleNodes = new Set<string>()
-      for (let i = 0; i <= currentStep && i < steps.length; i++) {
-        // previously used a non-existent property; use addedNodeIds[]
-        (steps[i].addedNodeIds || []).forEach((id) => visibleNodes.add(id))
-      }
+    const hasGV = !!layout && !!layout.nodes_json && !!layout.bbox
+    const nodePositions = hasGV ? calculateNodePositionsFromGV(bddData, layout!) : calculateNodePositions(bddData)
+    const visibleNodes = new Set<string>()
+    for (let i = 0; i <= currentStep && i < steps.length; i++) {
+      (steps[i].addedNodeIds || []).forEach((id) => visibleNodes.add(id))
+    }
 
     const expandVisible = (set: Set<string>) => {
       let changed = true
@@ -444,115 +796,191 @@ export default function BDDVisualizer() {
         Array.from(set).forEach((id) => {
           const node = bddData.nodes[id]
           if (!node) return
-          if (node.low && !set.has(node.low)) {
-            set.add(node.low)
-            changed = true
-          }
-          if (node.high && !set.has(node.high)) {
-            set.add(node.high)
-            changed = true
-          }
+          if (node.low && !set.has(node.low)) { set.add(node.low); changed = true }
+          if (node.high && !set.has(node.high)) { set.add(node.high); changed = true }
         })
       }
     }
     expandVisible(visibleNodes)
 
-    let svgContent = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">\n
+    // Compute bounds of nodes and curved edges
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    const include = (x: number, y: number) => {
+      if (x < minX) minX = x; if (y < minY) minY = y
+      if (x > maxX) maxX = x; if (y > maxY) maxY = y
+    }
+
+    const circleR = 15, rectW = 40, rectH = 20
+
+    // Node bounds
+    Object.values(bddData.nodes).forEach((node) => {
+      if (!visibleNodes.has(node.id)) return
+      const p = nodePositions[node.id]
+      if (!p) return
+      if (node.var === null) {
+        include(p.x - rectW / 2, p.y - rectH / 2)
+        include(p.x + rectW / 2, p.y + rectH / 2)
+      } else {
+        include(p.x - circleR, p.y - circleR)
+        include(p.x + circleR, p.y + circleR)
+      }
+    })
+
+    // Edge bounds (convex hull of endpoints+control points)
+    const baseCurveFor = (dx: number) => Math.max(80, Math.min(260, Math.abs(dx) * 0.6 + 100))
+    const hash = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h }
+    if (hasGV && layout?.edges_json) {
+      const H = layout.bbox.height
+      layout.edges_json.forEach(e => {
+        if (!visibleNodes.has(e.tail) || !visibleNodes.has(e.head)) return
+        e.points.forEach(([x, y]) => include(x, H - y))
+      })
+    } else {
+      Object.values(bddData.nodes).forEach((node) => {
+        if (!visibleNodes.has(node.id)) return
+        const pos = nodePositions[node.id]
+        if (!pos) return
+        const addEdgeBounds = (toId: string, dashed: boolean) => {
+          const target = nodePositions[toId]
+          if (!target) return
+          const toNode = bddData.nodes[toId]
+          const fromIsTerminal = node.var === null
+          const toIsTerminal = toNode?.var === null
+          const x1 = pos.x
+          const y1 = pos.y + (fromIsTerminal ? 10 : 15)
+          const x2 = target.x
+          const y2 = target.y - (toIsTerminal ? 10 : 15)
+          const mx = (x1 + x2) / 2
+          const my = (y1 + y2) / 2
+          const dx = x2 - x1
+          const j = ((hash(node.id + ":" + toId) % 21) - 10) * 4
+          const cx = mx + (dashed ? -1 : 1) * (baseCurveFor(dx) + j)
+          const cy = my + j * 0.2
+          include(x1, y1); include(x2, y2); include(cx, cy)
+        }
+        if (node.low && visibleNodes.has(node.low)) addEdgeBounds(node.low, true)
+        if (node.high && visibleNodes.has(node.high)) addEdgeBounds(node.high, false)
+      })
+    }
+
+    if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return
+    const M = 40
+    const width = Math.max(1, Math.ceil(maxX - minX + 2 * M))
+    const height = Math.max(1, Math.ceil(maxY - minY + 2 * M))
+    const ox = -minX + M
+    const oy = -minY + M
+
+    let svgContent = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">\n
   <defs>
     <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
       <feGaussianBlur stdDeviation="5" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
+    <marker id="arrowSolid" markerWidth="14" markerHeight="10" refX="14" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L14,5 L0,10 Z" fill="#333" />
+    </marker>
+    <marker id="arrowDashed" markerWidth="14" markerHeight="10" refX="14" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L14,5 L0,10 Z" fill="#666" />
+    </marker>
+    <marker id="arrowHighlight" markerWidth="14" markerHeight="10" refX="14" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L14,5 L0,10 Z" fill="#ff5722" />
+    </marker>
   </defs>\n`
 
+    if (hasGV && layout?.edges_json) {
+      const H = layout.bbox.height
+      layout.edges_json.forEach((e) => {
+        if (!visibleNodes.has(e.tail) || !visibleNodes.has(e.head)) return
+        const isHighlighted = (() => {
+          const tailNode = bddData.nodes[e.tail]
+          const headNode = bddData.nodes[e.head]
+          return (tailNode && (tailNode.highlight === true || tailNode.highlight === 1)) &&
+                 (headNode && (headNode.highlight === true || headNode.highlight === 1))
+        })()
+        const strokeColor = isHighlighted ? "#ff5722" : (e.style === "dashed" ? "#666" : "#333")
+        const strokeWidth = isHighlighted ? 3.5 : 2
+        const marker = isHighlighted ? "url(#arrowHighlight)" : (e.style === "dashed" ? "url(#arrowDashed)" : "url(#arrowSolid)")
+        const dash = e.style === "dashed" ? ' stroke-dasharray="5,5"' : ''
+        const glow = isHighlighted ? ' filter="url(#glow)"' : ''
+        const pts = e.points.map(([x, y]) => `${x + ox},${H - y + oy}`).join(" ")
+        svgContent += `  <polyline points="${pts}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" marker-end="${marker}"${dash}${glow}/>\n`
+      })
+    } else {
+      // Curved edges fallback
+      Object.values(bddData.nodes).forEach((node) => {
+        if (!visibleNodes.has(node.id)) return
+        const pos = nodePositions[node.id]
+        if (!pos) return
+        const isNodeHighlighted = node.highlight === true || node.highlight === 1
+        const drawCurve = (toId: string, dashed: boolean) => {
+          const targetPos = nodePositions[toId]
+          if (!targetPos) return
+          const targetNode = bddData.nodes[toId]
+          const isTargetHighlighted = targetNode && (targetNode.highlight === true || targetNode.highlight === 1)
+          const isEdgeHighlighted = isNodeHighlighted && isTargetHighlighted
+          const strokeColor = isEdgeHighlighted ? "#ff5722" : (dashed ? "#666" : "#333")
+          const strokeWidth = isEdgeHighlighted ? 3.5 : 2
+          const marker = isEdgeHighlighted ? "url(#arrowHighlight)" : (dashed ? "url(#arrowDashed)" : "url(#arrowSolid)")
+          const fromIsTerminal = node.var === null
+          const toIsTerminal = targetNode?.var === null
+          const x1 = pos.x + ox
+          const y1 = pos.y + (fromIsTerminal ? 10 : 15) + oy
+          const x2 = targetPos.x + ox
+          const y2 = targetPos.y - (toIsTerminal ? 10 : 15) + oy
+          const mx = (x1 + x2) / 2
+          const my = (y1 + y2) / 2
+          const dx = x2 - x1
+          const curvature = baseCurveFor(dx)
+          const j = ((hash(node.id + ":" + toId) % 21) - 10) * 2
+          const cx = mx + (dashed ? -1 : 1) * (curvature + j)
+          const cy = my
+          const path = Math.abs(dx) < 20
+            ? `M ${x1} ${y1} L ${x2} ${y2}`
+            : `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`
+          const dash = dashed ? ' stroke-dasharray="5,5"' : ''
+          const glow = isEdgeHighlighted ? ' filter="url(#glow)"' : ''
+          svgContent += `  <path d="${path}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" marker-end="${marker}"${dash}${glow}/>\n`
+        }
+        if (node.low && visibleNodes.has(node.low)) drawCurve(node.low, true)
+        if (node.high && visibleNodes.has(node.high)) drawCurve(node.high, false)
+      })
+    }
+
+    // Nodes on top (apply offset)
     Object.values(bddData.nodes).forEach((node) => {
       if (!visibleNodes.has(node.id)) return
       const pos = nodePositions[node.id]
       if (!pos) return
-      
-      const isNodeHighlighted = node.highlight === true || node.highlight === 1
-
-      if (node.low && visibleNodes.has(node.low)) {
-        const lowPos = nodePositions[node.low]
-        if (lowPos) {
-          const lowNode = bddData.nodes[node.low]
-          const isLowHighlighted = lowNode && (lowNode.highlight === true || lowNode.highlight === 1)
-          const isEdgeHighlighted = isNodeHighlighted && isLowHighlighted
-          
-          const strokeColor = isEdgeHighlighted ? "#ff5722" : "#666";
-          const strokeWidth = isEdgeHighlighted ? "4" : "2";
-          
-          svgContent += `  <line x1="${pos.x}" y1="${pos.y + 25}" x2="${lowPos.x}" y2="${lowPos.y - 25}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-dasharray="5,5" ${isEdgeHighlighted ? 'filter="url(#glow)"' : ''}/>\n`
-        }
-      }
-
-      if (node.high && visibleNodes.has(node.high)) {
-        const highPos = nodePositions[node.high]
-        if (highPos) {
-          const highNode = bddData.nodes[node.high]
-          const isHighHighlighted = highNode && (highNode.highlight === true || highNode.highlight === 1)
-          const isEdgeHighlighted = isNodeHighlighted && isHighHighlighted
-          
-          const strokeColor = isEdgeHighlighted ? "#ff5722" : "#333";
-          const strokeWidth = isEdgeHighlighted ? "4" : "2";
-          
-          svgContent += `  <line x1="${pos.x}" y1="${pos.y + 25}" x2="${highPos.x}" y2="${highPos.y - 25}" stroke="${strokeColor}" stroke-width="${strokeWidth}" ${isEdgeHighlighted ? 'filter="url(#glow)"' : ''}/>\n`
-        }
-      }
-    })
-
-    Object.values(bddData.nodes).forEach((node) => {
-      if (!visibleNodes.has(node.id)) return
-      const pos = nodePositions[node.id]
-      if (!pos) return
-
+      const x = pos.x + ox
+      const y = pos.y + oy
       const isTerminal = node.var === null
       const isOne = node.expr === "1" || node.expr === "True"
       const displayText = node.var || (isOne ? "1" : "0")
       const isHighlighted = node.highlight === true || node.highlight === 1
       const currentAdded = new Set<string>((steps[currentStep]?.addedNodeIds) || [])
       const isCurrentAdded = currentAdded.has(node.id)
-
       if (isTerminal) {
-        // For terminal nodes
-        let fillColor = isOne ? "#4caf50" : "#e57373"; // Green for 1, Red for 0
-        if (isCurrentAdded) {
-          fillColor = "#ffeb3b"; // Yellow for current step
-        } else if (isOne) {
-          fillColor = "#81c784"; // Green for 1/true
-        }
-        
-        let strokeColor = isHighlighted ? "#ff5722" : "#333";
-        let strokeWidth = isHighlighted ? "4" : "2";
-        
-        svgContent += `  <rect x="${pos.x - 40}" y="${pos.y - 20}" width="80" height="40" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>\n`
-        
-        // Add extra stroke for highlighted nodes
+        let fillColor = isOne ? "#4caf50" : "#e57373"
+        if (isCurrentAdded) fillColor = "#ffeb3b"
+        else if (isOne) fillColor = "#81c784"
+        const strokeColor = isHighlighted ? "#ff5722" : "#333"
+        const strokeWidth = isHighlighted ? 4 : 2
+        svgContent += `  <rect x="${x - rectW / 2}" y="${y - rectH / 2}" width="${rectW}" height="${rectH}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>\n`
         if (isHighlighted) {
-          svgContent += `  <rect x="${pos.x - 40}" y="${pos.y - 20}" width="80" height="40" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" filter="url(#glow)"/>\n`
+          svgContent += `  <rect x="${x - rectW / 2}" y="${y - rectH / 2}" width="${rectW}" height="${rectH}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" filter="url(#glow)"/>\n`
         }
-        
-        svgContent += `  <text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-size="16" font-weight="bold">${displayText}</text>\n`
+        svgContent += `  <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-size="16" font-weight="bold">${displayText}</text>\n`
       } else {
-        // For decision nodes
-        let fillColor = "#90caf9"; // Default blue
-        if (isCurrentAdded) {
-          fillColor = "#ffeb3b"; // Yellow for current step
-        } else if (isHighlighted) {
-          fillColor = "#42a5f5"; // Darker blue for highlighted
-        }
-        
-        let strokeColor = isHighlighted ? "#ff5722" : "#333";
-        let strokeWidth = isHighlighted ? "4" : "2";
-        
-        svgContent += `  <circle cx="${pos.x}" cy="${pos.y}" r="30" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>\n`
-        
-        // Add extra stroke for highlighted nodes
+        let fillColor = "#90caf9"
+        if (isCurrentAdded) fillColor = "#ffeb3b"
+        else if (isHighlighted) fillColor = "#42a5f5"
+        const strokeColor = isHighlighted ? "#ff5722" : "#333"
+        const strokeWidth = isHighlighted ? 4 : 2
+        svgContent += `  <circle cx="${x}" cy="${y}" r="${circleR}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>\n`
         if (isHighlighted) {
-          svgContent += `  <circle cx="${pos.x}" cy="${pos.y}" r="30" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" filter="url(#glow)"/>\n`
+          svgContent += `  <circle cx="${x}" cy="${y}" r="${circleR}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" filter="url(#glow)"/>\n`
         }
-        
-        svgContent += `  <text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-size="16" font-weight="bold">${displayText}</text>\n`
+        svgContent += `  <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-size="16" font-weight="bold">${displayText}</text>\n`
       }
     })
 
@@ -662,6 +1090,91 @@ export default function BDDVisualizer() {
       setError("Failed to export JSON. Make sure the API is running.")
     }
   }
+
+  // Handle mouse wheel for zooming
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
+    const delta = -e.deltaY / 500
+    const newScale = Math.max(0.25, Math.min(4, scale + delta))
+    
+    // Adjust the offset to zoom toward the mouse position
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (rect) {
+      const mouseX = e.clientX - rect.left
+      const mouseY = e.clientY - rect.top
+      
+      const newOffset = {
+        x: mouseX - (mouseX - offset.x) * (newScale / scale),
+        y: mouseY - (mouseY - offset.y) * (newScale / scale)
+      }
+      
+      setScale(newScale)
+      setOffset(newOffset)
+    }
+  }
+
+  // Handle mouse events for dragging/panning
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    setIsDragging(true)
+    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y })
+  }
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isDragging) {
+      setOffset({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      })
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  const handleMouseLeave = () => {
+    setIsDragging(false)
+  }
+
+  // Reset zoom and pan
+  const handleResetView = () => {
+    if (layout && layout.bbox) {
+      fitViewToLayout(layout)
+    } else {
+      setScale(1)
+      setOffset({ x: 0, y: 0 })
+    }
+  }
+
+  // Resize canvas to fill its container (100vh tall container)
+  useEffect(() => {
+    const resize = () => {
+      const canvas = canvasRef.current
+      const container = canvasContainerRef.current
+      if (!canvas || !container) return
+
+      const styles = window.getComputedStyle(container)
+      const padX = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight)
+      const padY = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom)
+      const contentWidth = Math.max(1, container.clientWidth - padX)
+      const contentHeight = Math.max(1, container.clientHeight - padY)
+
+      // Set CSS size to fill container content box
+      canvas.style.width = `${contentWidth}px`
+      canvas.style.height = `${contentHeight}px`
+      // Match internal buffer to CSS size (no DPR scaling to keep transforms stable)
+      canvas.width = Math.floor(contentWidth)
+      canvas.height = Math.floor(contentHeight)
+
+      if (bddData && steps.length > 0) {
+        drawBDD(currentStep)
+      }
+    }
+    resize()
+    window.addEventListener('resize', resize)
+    return () => window.removeEventListener('resize', resize)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bddData, steps, currentStep])
 
   return (
     <div className={styles.container}>
@@ -780,7 +1293,11 @@ export default function BDDVisualizer() {
             {showEvalPath && (
               <div className={styles.variableValuesContainer}>
                 <div className={styles.variableValuesGrid}>
-                  {formula.replace(/[^a-z_]/g, '').split('').filter((v, i, a) => a.indexOf(v) === i).map(variable => (
+                  {(
+                    (bddData && Array.isArray(bddData.variables) && bddData.variables.length > 0)
+                      ? bddData.variables
+                      : Array.from(new Set((formula.match(/[a-z_][a-z0-9_]*/g) || [])))
+                  ).map(variable => (
                     <div key={variable} className={styles.variableValueItem}>
                       <label htmlFor={`var-${variable}`}>{variable}:</label>
                       <select
@@ -832,8 +1349,20 @@ export default function BDDVisualizer() {
 
             {/* Canvas with right vertical legend */}
             <div className={styles.canvasRow}>
-              <div className={styles.canvasContainer}>
-                <canvas ref={canvasRef} width={800} height={600} className={styles.canvas} />
+              <div className={styles.canvasContainer} ref={canvasContainerRef}>
+                <canvas 
+                  ref={canvasRef}
+                  className={styles.canvas}
+                  onWheel={handleWheel}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseLeave}
+                />
+                <div className={styles.zoomControls}>
+                  <button onClick={handleResetView} className={styles.zoomButton}>Reset View</button>
+                  <span className={styles.zoomLevel}>{Math.round(scale * 100)}%</span>
+                </div>
               </div>
 
               <aside className={styles.legendSidebar}>

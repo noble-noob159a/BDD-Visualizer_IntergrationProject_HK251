@@ -178,6 +178,7 @@
 }
 
 .canvasContainer {
+  position: relative;
   background: white;
   padding: 20px;
   border-radius: 12px;
@@ -186,13 +187,53 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow: hidden;
+  height: 100vh; /* Fill full screen height for diagram */
 }
 
 .canvas {
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  max-width: 100%;
-  height: auto;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.canvas:active {
+  cursor: grabbing;
+}
+
+.zoomControls {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 5px 10px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.zoomButton {
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+.zoomButton:hover {
+  background: #5a6ecc;
+}
+
+.zoomLevel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #333;
 }
 
 .explanationTop {

@@ -107,6 +107,13 @@ bdd-visualizer/
 - **SVG Export**: Creates a scalable vector graphic of the diagram
 - **TikZ Export**: Generates LaTeX code for including in academic papers
 
+### Graphviz-Accurate Layout
+
+- The canvas now uses the same node positions and edge splines as the LaTeX/TikZ export.
+- After you click "Visualize", the app fetches a Graphviz layout from the backend (`/api/export/layout`).
+- The canvas renders using these coordinates (converted from Graphviz’s coordinate system), so nodes and edges align with the TikZ output.
+- Use "Reset View" to fit the Graphviz layout to the canvas if you pan/zoom away.
+
 ## Troubleshooting
 
 ### Common Issues

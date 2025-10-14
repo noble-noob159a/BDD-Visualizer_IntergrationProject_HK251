@@ -196,13 +196,14 @@ class BDD:
 
         dot = Digraph(comment="Binary Decision Diagram (BFS)", format="png")
 
+        dot.attr(ranksep="0.3", nodesep="0.2")
         # FIX 1: Set global node attributes to enforce shape and size consistently.
         dot.node_attr.update(
             shape='rect',  # default for normal nodes
             style='filled',
-            fontsize='16',
-            width='1.5',
-            height='1.5',
+            fontsize='10',
+            width='0.6',
+            height='0.6',
             fixedsize='true',
         )
 
@@ -230,9 +231,9 @@ class BDD:
                     label=label,
                     fillcolor=fillcolor,
                     _attributes={'shape': 'rect',
-                                'fontsize': '16',
-                                 'width': '1.5',
-                                 'height': '1.5',
+                                'fontsize': '10',
+                                 'width': '0.6',
+                                 'height': '0.4',
                                  'fixedsize': 'true',}
                 )
             else:
@@ -252,9 +253,9 @@ class BDD:
                     label=label,
                     fillcolor=fillcolor,
                     _attributes={'shape': 'circle',
-                                'fontsize': '16',
-                                 'width': '1.5',
-                                 'height': '1.5',
+                                'fontsize': '10',
+                                 'width': '0.4',
+                                 'height': '0.4',
                                  'fixedsize': 'true',}
                 )
             
