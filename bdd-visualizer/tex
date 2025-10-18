@@ -2,19 +2,46 @@
 \begin{tikzpicture}[>=latex,line join=bevel,scale=0.85,>=stealth,thick,yscale=0.8]
 %%
 \begin{scope}[draw, minimum width=1cm, minimum height=0.8cm]
-  \node (36) at (77.0bp,174.0bp) [draw,fill=blue!30,circle] {$a$};
-  \node (34) at (59.0bp,72.4bp) [draw,fill=blue!30,circle] {$c$};
-  \node (35) at (95.0bp,123.2bp) [draw,fill=blue!30,circle] {$b$};
-  \node (29) at (27.0bp,18.0bp) [draw,fill=blue!50,rectangle] {$False$};
-  \node (28) at (95.0bp,18.0bp) [draw,fill=blue!50,rectangle] {$True$};
+  \node (320) at (35.4bp,522.4bp) [draw,fill=red!50,circle] {$a$};
+  \node (319) at (14.4bp,471.6bp) [draw,fill=red!50,circle] {$b$};
+  \node (318) at (57.4bp,471.6bp) [draw,fill=blue!30,circle] {$b$};
+  \node (316) at (14.4bp,420.8bp) [draw,fill=blue!30,circle] {$c$};
+  \node (317) at (57.4bp,420.8bp) [draw,fill=red!50,circle] {$c$};
+  \node (315) at (69.4bp,370.0bp) [draw,fill=red!50,circle] {$d$};
+  \node (293) at (63.4bp,14.4bp) [draw,fill=red!50,rectangle] {$True$};
+  \node (314) at (69.4bp,319.2bp) [draw,fill=red!50,circle] {$e$};
+  \node (313) at (103.4bp,268.4bp) [draw,fill=red!50,circle] {$f$};
+  \node (311) at (138.4bp,166.8bp) [draw,fill=red!50,circle] {$h$};
+  \node (312) at (102.4bp,217.6bp) [draw,fill=red!50,circle] {$g$};
+  \node (310) at (138.4bp,116.0bp) [draw,fill=red!50,circle] {$i$};
+  \node (294) at (165.4bp,14.4bp) [draw,fill=red!50,rectangle] {$False$};
+  \node (309) at (129.4bp,65.2bp) [draw,fill=red!50,circle] {$j$};
 \end{scope}
 \begin{scope}[line width=1pt]
-  \draw [->,dashed] (36) ..controls (71.741bp,143.9bp) and (67.001bp,117.67bp)  .. (34);
-  \draw [->,solid] (36) ..controls (83.218bp,156.14bp) and (84.784bp,151.9bp)  .. (35);
-  \draw [->,dashed] (34) ..controls (49.242bp,55.422bp) and (46.337bp,50.664bp)  .. (29);
-  \draw [->,solid] (34) ..controls (69.81bp,55.665bp) and (73.371bp,50.482bp)  .. (28);
-  \draw [->,dashed] (35) ..controls (82.925bp,105.83bp) and (78.416bp,99.719bp)  .. (34);
-  \draw [->,solid] (35) ..controls (95.0bp,93.252bp) and (95.0bp,67.49bp)  .. (28);
+  \draw [red!50,->,dashed] (320) ..controls (28.521bp,505.42bp) and (27.015bp,501.91bp)  .. (319);
+  \draw [->,solid] (320) ..controls (42.899bp,504.77bp) and (44.993bp,500.12bp)  .. (318);
+  \draw [->,dashed] (319) ..controls (14.4bp,453.63bp) and (14.4bp,450.23bp)  .. (316);
+  \draw [red!50,->,solid] (319) ..controls (27.966bp,455.2bp) and (33.485bp,448.94bp)  .. (317);
+  \draw [->,solid] (318) ..controls (43.264bp,454.56bp) and (36.883bp,447.32bp)  .. (316);
+  \draw [->,dashed] (318) ..controls (57.4bp,453.63bp) and (57.4bp,450.23bp)  .. (317);
+  \draw [->,dashed] (316) ..controls (32.157bp,404.04bp) and (41.799bp,395.49bp)  .. (315);
+  \draw [->,solid] (316) ..controls (8.7181bp,387.22bp) and (3.4bp,351.17bp)  .. (3.4bp,320.2bp) .. controls (3.4bp,320.2bp) and (3.4bp,320.2bp)  .. (3.4bp,115.0bp) .. controls (3.4bp,84.851bp) and (23.821bp,55.981bp)  .. (293);
+  \draw [red!50,->,solid] (317) ..controls (61.314bp,403.88bp) and (62.001bp,401.09bp)  .. (315);
+  \draw [red!50,->,dashed] (317) ..controls (45.265bp,388.45bp) and (33.4bp,352.22bp)  .. (33.4bp,320.2bp) .. controls (33.4bp,320.2bp) and (33.4bp,320.2bp)  .. (33.4bp,115.0bp) .. controls (33.4bp,89.548bp) and (42.493bp,61.933bp)  .. (293);
+  \draw [red!50,->,dashed] (315) ..controls (69.4bp,352.96bp) and (69.4bp,350.64bp)  .. (314);
+  \draw [red!50,->,solid] (315) ..controls (81.863bp,350.99bp) and (87.113bp,342.14bp)  .. (90.4bp,333.6bp) .. controls (94.839bp,322.07bp) and (97.852bp,308.77bp)  .. (313);
+  \draw [red!50,->,solid] (314) ..controls (66.301bp,285.54bp) and (63.4bp,249.43bp)  .. (63.4bp,218.6bp) .. controls (63.4bp,218.6bp) and (63.4bp,218.6bp)  .. (63.4bp,115.0bp) .. controls (63.4bp,90.969bp) and (63.4bp,63.677bp)  .. (293);
+  \draw [red!50,->,dashed] (314) ..controls (80.29bp,302.57bp) and (83.832bp,297.49bp)  .. (313);
+  \draw [red!50,->,dashed] (313) ..controls (115.27bp,248.99bp) and (120.17bp,240.29bp)  .. (123.4bp,232.0bp) .. controls (127.92bp,220.42bp) and (131.3bp,207.1bp)  .. (311);
+  \draw [red!50,->,solid] (313) ..controls (103.07bp,251.36bp) and (103.02bp,249.04bp)  .. (312);
+  \draw [red!50,->,dashed] (311) ..controls (138.4bp,149.76bp) and (138.4bp,147.44bp)  .. (310);
+  \draw [red!50,->,solid] (311) ..controls (151.22bp,147.91bp) and (156.47bp,139.06bp)  .. (159.4bp,130.4bp) .. controls (169.08bp,101.8bp) and (169.43bp,66.918bp)  .. (294);
+  \draw [red!50,->,solid] (312) ..controls (97.135bp,174.77bp) and (87.751bp,106.74bp)  .. (74.4bp,50.8bp) .. controls (73.777bp,48.19bp) and (73.065bp,45.492bp)  .. (293);
+  \draw [red!50,->,dashed] (312) ..controls (114.02bp,200.85bp) and (117.9bp,195.59bp)  .. (311);
+  \draw [red!50,->,dashed] (310) ..controls (145.49bp,95.334bp) and (148.26bp,87.088bp)  .. (150.4bp,79.6bp) .. controls (153.77bp,67.796bp) and (156.95bp,54.614bp)  .. (294);
+  \draw [red!50,->,solid] (310) ..controls (135.44bp,98.974bp) and (134.96bp,96.362bp)  .. (309);
+  \draw [red!50,->,solid] (309) ..controls (111.43bp,50.911bp) and (102.43bp,44.26bp)  .. (293);
+  \draw [red!50,->,dashed] (309) ..controls (140.45bp,49.223bp) and (143.56bp,45.007bp)  .. (294);
 \end{scope}
 %
 \end{tikzpicture}

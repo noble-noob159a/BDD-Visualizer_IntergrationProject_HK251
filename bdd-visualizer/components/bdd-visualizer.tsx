@@ -46,6 +46,8 @@ export default function BDDVisualizer() {
   const [variableValues, setVariableValues] = useState<Record<string, number>>({})
   const [showEvalPath, setShowEvalPath] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const cyContainerRef = useRef<HTMLDivElement>(null)
+  const cyInstanceRef = useRef<any>(null)
   const canvasContainerRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<number | null>(null)
   
@@ -278,8 +280,7 @@ export default function BDDVisualizer() {
         const isHighlighted = (() => {
           const tailNode = bddData.nodes[tail]
           const headNode = bddData.nodes[head]
-          return (tailNode && (tailNode.highlight === true || tailNode.highlight === 1)) &&
-                 (headNode && (headNode.highlight === true || headNode.highlight === 1))
+          return !!(tailNode && tailNode.highlight) && !!(headNode && headNode.highlight)
         })()
 
         ctx.save()
@@ -317,12 +318,12 @@ export default function BDDVisualizer() {
         if (!visibleNodes.has(node.id)) return
         const pos = nodePositions[node.id]
         if (!pos) return
-        const isNodeHighlighted = node.highlight === true || node.highlight === 1
+  const isNodeHighlighted = !!node.highlight
         if (node.low && visibleNodes.has(node.low)) {
           const lowPos = nodePositions[node.low]
           if (lowPos) {
             const lowNode = bddData.nodes[node.low]
-            const isLowHighlighted = lowNode && (lowNode.highlight === true || lowNode.highlight === 1)
+            const isLowHighlighted = !!(lowNode && lowNode.highlight)
             const isEdgeHighlighted = isNodeHighlighted && isLowHighlighted
             ctx.save()
             ctx.setLineDash([5, 5])
@@ -364,7 +365,7 @@ export default function BDDVisualizer() {
           const highPos = nodePositions[node.high]
           if (highPos) {
             const highNode = bddData.nodes[node.high]
-            const isHighHighlighted = highNode && (highNode.highlight === true || highNode.highlight === 1)
+            const isHighHighlighted = !!(highNode && highNode.highlight)
             const isEdgeHighlighted = isNodeHighlighted && isHighHighlighted
             ctx.save()
             ctx.setLineDash([])
@@ -408,7 +409,7 @@ export default function BDDVisualizer() {
       const isTerminal = node.var === null
       const isOne = node.expr === "1" || node.expr === "True"
       const displayText = node.var || (isOne ? "1" : "0")
-      const isHighlighted = node.highlight === true || node.highlight === 1
+  const isHighlighted = !!node.highlight
 
       ctx.save()
 
@@ -481,6 +482,270 @@ export default function BDDVisualizer() {
     // Restore the canvas context state after drawing
     ctx.restore()
   }
+
+  // --- Cytoscape integration -------------------------------------------------
+  const convertToCytoscapeElements = (data: BDDData, visibleUpToStep: number) => {
+    const elements: any[] = []
+    if (!data) return elements
+
+    const visibleNodes = new Set<string>()
+    for (let i = 0; i <= visibleUpToStep && i < steps.length; i++) {
+      (steps[i].addedNodeIds || []).forEach((id) => visibleNodes.add(id))
+    }
+    // expand visibility to children
+    let changed = true
+    while (changed) {
+      changed = false
+      Array.from(visibleNodes).forEach((id) => {
+        const n = data.nodes[id]
+        if (!n) return
+        if (n.low && !visibleNodes.has(n.low)) { visibleNodes.add(n.low); changed = true }
+        if (n.high && !visibleNodes.has(n.high)) { visibleNodes.add(n.high); changed = true }
+      })
+    }
+
+    Object.values(data.nodes).forEach((node) => {
+      if (!visibleNodes.has(node.id)) return
+      const isTerminal = node.var === null
+      const isOne = node.expr === "1" || node.expr === "True"
+      const label = node.var || (isOne ? "1" : "0")
+      elements.push({ 
+        data: { 
+          id: node.id, 
+          label, 
+          isTerminal,
+          highlighted: node.highlight 
+        },
+        classes: node.highlight ? 'highlighted' : ''
+      })
+
+      if (node.low && visibleNodes.has(node.low)) {
+        const lowNode = data.nodes[node.low]
+        elements.push({ 
+          data: { 
+            id: `${node.id}->${node.low}`, 
+            source: node.id, 
+            target: node.low, 
+            type: "low"
+          },
+          classes: (node.highlight && lowNode?.highlight) ? 'highlighted' : ''
+        })
+      }
+
+      if (node.high && visibleNodes.has(node.high)) {
+        const highNode = data.nodes[node.high]
+        elements.push({ 
+          data: { 
+            id: `${node.id}->${node.high}`, 
+            source: node.id, 
+            target: node.high, 
+            type: "high"
+          },
+          classes: (node.highlight && highNode?.highlight) ? 'highlighted' : ''
+        })
+      }
+    })
+
+    return elements
+  }
+
+  const ensureCytoscape = async () => {
+    if (cyInstanceRef.current) return cyInstanceRef.current
+    // dynamic import to avoid SSR issues
+  // @ts-ignore: dynamic import of optional runtime dependency
+  const cytoscape = (await import("cytoscape"))
+    try {
+  // @ts-ignore: dynamic import of optional runtime dependency
+  const dagre = (await import("cytoscape-dagre")).default
+      cytoscape.default.use(dagre)
+    } catch (e) {
+      // ignore if dagre not available
+    }
+    return cytoscape.default || cytoscape
+  }
+
+  const initOrUpdateCytoscape = async () => {
+    if (!bddData || steps.length === 0) return
+    const cyLib: any = await ensureCytoscape()
+    const container = cyContainerRef.current
+    if (!container) return
+
+    const elements = convertToCytoscapeElements(bddData, currentStep)
+
+    if (!cyInstanceRef.current) {
+      cyInstanceRef.current = cyLib({
+        container,
+        elements,
+        style: [
+          // Base node styling
+          { 
+            selector: "node", 
+            style: { 
+              'label': 'data(label)',
+              'text-valign': 'center',
+              'text-halign': 'center',
+              'font-size': '16px',
+              'font-weight': 'bold',
+              'color': '#000'
+            }
+          },
+          // Decision nodes (non-terminal)
+          { 
+            selector: "node:not([isTerminal])", 
+            style: { 
+              'background-color': '#90caf9',
+              'shape': 'ellipse',
+              'border-width': 2,
+              'border-color': '#333',
+              'width': '50px',
+              'height': '50px'
+            }
+          },
+          // Terminal node 0 (False)
+          { 
+            selector: "node[isTerminal][label='0']", 
+            style: { 
+              'shape': 'rectangle',
+              'background-color': '#e57373',
+              'width': '50px',
+              'height': '35px',
+              'border-width': 2,
+              'border-color': '#333'
+            }
+          },
+          // Terminal node 1 (True)
+          { 
+            selector: "node[isTerminal][label='1']", 
+            style: { 
+              'shape': 'rectangle',
+              'background-color': '#81c784',
+              'width': '50px',
+              'height': '35px',
+              'border-width': 2,
+              'border-color': '#333'
+            }
+          },
+          // Current step nodes (yellow highlight)
+          { 
+            selector: ".current-step", 
+            style: { 
+              'background-color': '#ffeb3b'
+            }
+          },
+          // Highlighted nodes (evaluation path - orange)
+          { 
+            selector: "node.highlighted", 
+            style: { 
+              'background-color': '#ff9800', // Orange for evaluation path
+              'border-width': 4,
+              'border-color': '#e65100'
+            }
+          },
+          // Current node in evaluation path (yellow)
+          {
+            selector: "node.highlighted.current-step",
+            style: {
+              'background-color': '#ffeb3b', // Yellow for current node
+              'border-width': 4,
+              'border-color': '#f57f17'
+            }
+          },
+          // Base edge styling
+          { 
+            selector: "edge", 
+            style: { 
+              'curve-style': 'bezier',
+              'control-point-step-size': 60,
+              'width': 2,
+              'target-arrow-shape': 'triangle',
+              'arrow-scale': 1.2
+            }
+          },
+          // Low branch edges (dashed)
+          { 
+            selector: "edge[type='low']", 
+            style: { 
+              'line-style': 'dashed',
+              'line-dash-pattern': [6, 4],
+              'line-color': '#666',
+              'target-arrow-color': '#666'
+            }
+          },
+          // High branch edges (solid)
+          { 
+            selector: "edge[type='high']", 
+            style: { 
+              'line-style': 'solid',
+              'line-color': '#333',
+              'target-arrow-color': '#333'
+            }
+          },
+          // Highlighted edges (evaluation path)
+          { 
+            selector: "edge.highlighted", 
+            style: { 
+              'line-color': '#ff5722',
+              'target-arrow-color': '#ff5722',
+              'width': 3.5
+            }
+          }
+        ],
+        layout: {
+          name: 'dagre',
+          rankDir: 'TB',
+          nodeSep: 80,
+          edgeSep: 10,
+          rankSep: 100,
+          spacingFactor: 1.2
+        },
+        wheelSensitivity: 0.2,
+        minZoom: 0.25,
+        maxZoom: 4
+      })
+
+      // Add interaction handlers
+      cyInstanceRef.current.on('tap', 'node', (evt: any) => {
+        const node = evt.target
+        cyInstanceRef.current.animate({ 
+          center: { eles: node }, 
+          zoom: Math.max(cyInstanceRef.current.zoom(), 1),
+          duration: 300 
+        })
+      })
+
+      // Double-click to fit
+      cyInstanceRef.current.on('dbltap', (evt: any) => {
+        if (evt.target === cyInstanceRef.current) {
+          cyInstanceRef.current.fit(undefined, 50)
+        }
+      })
+    } else {
+      // Update existing instance
+      cyInstanceRef.current.json({ elements })
+      cyInstanceRef.current.layout({ 
+        name: 'dagre', 
+        rankDir: 'TB', 
+        nodeSep: 80, 
+        edgeSep: 10, 
+        rankSep: 100,
+        spacingFactor: 1.2
+      }).run()
+    }
+
+    // Apply current-step class
+    const currentAdded = new Set<string>((steps[currentStep]?.addedNodeIds) || [])
+    cyInstanceRef.current.nodes().removeClass('current-step')
+    currentAdded.forEach((id) => {
+      const n = cyInstanceRef.current.getElementById(id)
+      if (n && n.length > 0) n.addClass('current-step')
+    })
+  }
+
+  useEffect(() => {
+    initOrUpdateCytoscape()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bddData, steps, currentStep])
+
 
   const calculateNodePositions = (data: BDDData): Record<string, { x: number; y: number }> => {
     const positions: Record<string, { x: number; y: number }> = {}
@@ -762,28 +1027,106 @@ export default function BDDVisualizer() {
       setCurrentStep((prev) => prev - 1)
     }
   }
+  
+  // Zoom controls
+  const handleZoomIn = () => {
+    if (cyInstanceRef.current) {
+      const currentZoom = cyInstanceRef.current.zoom();
+      cyInstanceRef.current.zoom({
+        level: currentZoom * 1.2,
+        renderedPosition: { x: cyInstanceRef.current.width() / 2, y: cyInstanceRef.current.height() / 2 }
+      });
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (cyInstanceRef.current) {
+      const currentZoom = cyInstanceRef.current.zoom();
+      cyInstanceRef.current.zoom({
+        level: currentZoom / 1.2,
+        renderedPosition: { x: cyInstanceRef.current.width() / 2, y: cyInstanceRef.current.height() / 2 }
+      });
+    }
+  };
+
+  const handleResetZoom = () => {
+    if (cyInstanceRef.current) {
+      cyInstanceRef.current.fit(undefined, 50);
+    }
+  };
+
+  // Helper function for downloading files
+  const downloadFile = (content: Blob | string, filename: string, type: string) => {
+    const blob = typeof content === 'string' ? new Blob([content], {type}) : content;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bdd${filename}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleExportPNG = () => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    if (!cyInstanceRef.current) return;
+    try {
+      const pngBlob = cyInstanceRef.current.png({
+        scale: 3,
+        full: true,
+        bg: '#ffffff',
+        output: 'blob'
+      });
 
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `bdd-${formula.replace(/[^a-zA-Z0-9]/g, "_")}.png`
-        a.click()
-        URL.revokeObjectURL(url)
+      if (pngBlob instanceof Promise) {
+        pngBlob.then((blob: Blob) => {
+          downloadFile(blob, '.png', 'image/png');
+        });
+      } else {
+        downloadFile(pngBlob, '.png', 'image/png');
       }
-    })
-  }
+    } catch (err) {
+      setError('Failed to export PNG from Cytoscape');
+    }
+  };
 
   const handleExportSVG = () => {
-    if (!bddData) return
+    if (cyInstanceRef.current) {
+      try {
+        // Get the SVG element from the Cytoscape container
+        const container = cyInstanceRef.current.container();
+        const svgElement = container.querySelector('svg');
+        
+        // Clone the SVG to avoid modifying the original
+        const svgClone = svgElement.cloneNode(true) as SVGElement;
+        
+        // Set proper attributes for standalone SVG
+        svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        svgClone.setAttribute('width', svgElement.clientWidth.toString());
+        svgClone.setAttribute('height', svgElement.clientHeight.toString());
+        svgClone.setAttribute('viewBox', `0 0 ${svgElement.clientWidth} ${svgElement.clientHeight}`);
+        
+        // Serialize to string
+        const svgContent = new XMLSerializer().serializeToString(svgClone);
+        
+        // Create a proper SVG document with correct headers
+        const svgDoctype = '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n';
+        const fullSvgContent = svgDoctype + svgContent;
+        
+        // Download the SVG file
+        downloadFile(fullSvgContent, '.svg', 'image/svg+xml');
+      } catch (err) {
+        console.error('SVG export error:', err);
+        setError('Failed to export SVG from Cytoscape: ' + (err instanceof Error ? err.message : String(err)));
+      }
+      return; // Exit early for cytoscape mode
+    }
 
-    const hasGV = !!layout && !!layout.nodes_json && !!layout.bbox
-    const nodePositions = hasGV ? calculateNodePositionsFromGV(bddData, layout!) : calculateNodePositions(bddData)
+  // Canvas SVG export code (rest of the function remains the same)
+  if (!bddData) return;
+  
+  const hasGV = !!layout && !!layout.nodes_json && !!layout.bbox
+  const nodePositions = hasGV ? calculateNodePositionsFromGV(bddData, layout!) : calculateNodePositions(bddData)
     const visibleNodes = new Set<string>()
     for (let i = 0; i <= currentStep && i < steps.length; i++) {
       (steps[i].addedNodeIds || []).forEach((id) => visibleNodes.add(id))
@@ -894,8 +1237,7 @@ export default function BDDVisualizer() {
         const isHighlighted = (() => {
           const tailNode = bddData.nodes[e.tail]
           const headNode = bddData.nodes[e.head]
-          return (tailNode && (tailNode.highlight === true || tailNode.highlight === 1)) &&
-                 (headNode && (headNode.highlight === true || headNode.highlight === 1))
+     return !!(tailNode && tailNode.highlight) && !!(headNode && headNode.highlight)
         })()
         const strokeColor = isHighlighted ? "#ff5722" : (e.style === "dashed" ? "#666" : "#333")
         const strokeWidth = isHighlighted ? 3.5 : 2
@@ -911,12 +1253,12 @@ export default function BDDVisualizer() {
         if (!visibleNodes.has(node.id)) return
         const pos = nodePositions[node.id]
         if (!pos) return
-        const isNodeHighlighted = node.highlight === true || node.highlight === 1
+  const isNodeHighlighted = !!node.highlight
         const drawCurve = (toId: string, dashed: boolean) => {
           const targetPos = nodePositions[toId]
           if (!targetPos) return
           const targetNode = bddData.nodes[toId]
-          const isTargetHighlighted = targetNode && (targetNode.highlight === true || targetNode.highlight === 1)
+          const isTargetHighlighted = !!(targetNode && targetNode.highlight)
           const isEdgeHighlighted = isNodeHighlighted && isTargetHighlighted
           const strokeColor = isEdgeHighlighted ? "#ff5722" : (dashed ? "#666" : "#333")
           const strokeWidth = isEdgeHighlighted ? 3.5 : 2
@@ -956,7 +1298,7 @@ export default function BDDVisualizer() {
       const isTerminal = node.var === null
       const isOne = node.expr === "1" || node.expr === "True"
       const displayText = node.var || (isOne ? "1" : "0")
-      const isHighlighted = node.highlight === true || node.highlight === 1
+  const isHighlighted = !!node.highlight
       const currentAdded = new Set<string>((steps[currentStep]?.addedNodeIds) || [])
       const isCurrentAdded = currentAdded.has(node.id)
       if (isTerminal) {
@@ -1349,21 +1691,15 @@ export default function BDDVisualizer() {
 
             {/* Canvas with right vertical legend */}
             <div className={styles.canvasRow}>
-              <div className={styles.canvasContainer} ref={canvasContainerRef}>
-                <canvas 
-                  ref={canvasRef}
-                  className={styles.canvas}
-                  onWheel={handleWheel}
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseLeave}
-                />
+              <div className={styles.canvasContainer}>
+                <div ref={cyContainerRef} className={styles.cytoscapeContainer} />
                 <div className={styles.zoomControls}>
-                  <button onClick={handleResetView} className={styles.zoomButton}>Reset View</button>
-                  <span className={styles.zoomLevel}>{Math.round(scale * 100)}%</span>
+                  <button onClick={() => handleZoomIn()} className={styles.zoomButton} title="Zoom In">+</button>
+                  <button onClick={() => handleZoomOut()} className={styles.zoomButton} title="Zoom Out">-</button>
+                  <button onClick={() => handleResetZoom()} className={styles.zoomButton} title="Reset Zoom">↺</button>
                 </div>
               </div>
+
 
               <aside className={styles.legendSidebar}>
                 <h3>Legend</h3>
@@ -1403,8 +1739,11 @@ export default function BDDVisualizer() {
                 <button onClick={handleExportPNG} className={styles.exportButton}>
                   Export as PNG
                 </button>
-                <button onClick={handleExportSVG} className={styles.exportButton}>
-                  Export as SVG
+                <button 
+                    onClick={handleExportSVG} 
+                    className={styles.exportButton}
+                  >
+                    Export as SVG
                 </button>
                 <button onClick={handleExportTikZ} className={styles.exportButton}>
                   Export as TikZ (LaTeX)
