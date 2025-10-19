@@ -1754,8 +1754,9 @@ export default function BDDVisualizer() {
           <>
             {/* Explanation at top of canvas */}
             <div className={styles.explanationTop}>
-              <h3>Current Step Explanation:</h3>
+              <h3 style={{fontWeight: 700}}>Current Step Explanation:</h3>
               <p>{steps[currentStep]?.explanation}</p>
+              <p className={styles.tip}>Tip: Hold and drag nodes to adjust the diagram position as needed.</p>
             </div>
 
             {/* Canvas with right vertical legend */}

@@ -1,6 +1,6 @@
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #667eea;
   padding: 20px;
 }
 
@@ -67,6 +67,15 @@
   margin-top: 6px;
   color: #666;
   font-size: 0.875rem;
+}
+
+.tip {
+  display: block;
+  margin-top: 12px;
+  color: #667eea;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.4;
 }
 
 .customOrderContainer {
@@ -142,7 +151,7 @@
 .visualizeButton {
   width: 100%;
   padding: 14px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #667eea;
   color: white;
   border: none;
   border-radius: 8px;
