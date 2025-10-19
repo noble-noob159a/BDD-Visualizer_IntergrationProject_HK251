@@ -197,39 +197,6 @@
   min-height: 400px;
 }
 
-.zoomControls {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 10;
-}
-
-.zoomButton {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: white;
-  border: 2px solid #667eea;
-  color: #667eea;
-  font-size: 18px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
-}
-
-.zoomButton:hover {
-  background: #667eea;
-  color: white;
-  transform: scale(1.05);
-}
-
 .canvas {
   border: 2px solid #e0e0e0;
   border-radius: 8px;

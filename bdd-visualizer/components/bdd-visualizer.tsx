@@ -1093,31 +1093,100 @@ export default function BDDVisualizer() {
   const handleExportSVG = () => {
     if (cyInstanceRef.current) {
       try {
-        // Get the SVG element from the Cytoscape container
-        const container = cyInstanceRef.current.container();
-        const svgElement = container.querySelector('svg');
+        // Get the Cytoscape instance
+        const cy = cyInstanceRef.current;
         
-        // Clone the SVG to avoid modifying the original
-        const svgClone = svgElement.cloneNode(true) as SVGElement;
+        // Get the graph dimensions
+        const bb = cy.elements().boundingBox();
+        const width = bb.w;
+        const height = bb.h;
         
-        // Set proper attributes for standalone SVG
-        svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-        svgClone.setAttribute('width', svgElement.clientWidth.toString());
-        svgClone.setAttribute('height', svgElement.clientHeight.toString());
-        svgClone.setAttribute('viewBox', `0 0 ${svgElement.clientWidth} ${svgElement.clientHeight}`);
+        // Create SVG content with defs for arrow markers
+        let svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${bb.x1} ${bb.y1} ${width} ${height}">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#000"/>
+    </marker>
+  </defs>
+  <rect x="${bb.x1}" y="${bb.y1}" width="${width}" height="${height}" fill="white"/>
+`;
         
-        // Serialize to string
-        const svgContent = new XMLSerializer().serializeToString(svgClone);
+        // Add nodes to SVG
+        cy.nodes().forEach(node => {
+          const pos = node.position();
+          const label = node.data('label') || node.id();
+          const color = node.style('background-color');
+          const borderColor = node.style('border-color');
+          const borderWidth = parseFloat(node.style('border-width'));
+          const width = parseFloat(node.style('width'));
+          const height = parseFloat(node.style('height'));
+          
+          // Check if node is a terminal node (typically has numeric label like 0 or 1)
+          const isTerminal = /^[0-1]$/.test(label);
+          
+          if (isTerminal) {
+            // Draw rectangle for terminal nodes
+            svgContent += `  <rect x="${pos.x - width/2}" y="${pos.y - height/2}" width="${width}" height="${height}" rx="3" ry="3" fill="${color}" stroke="${borderColor}" stroke-width="${borderWidth}"/>
+  <text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="central" fill="black" font-size="14px">${label}</text>
+`;
+          } else {
+            // Draw circle for non-terminal nodes
+            svgContent += `  <circle cx="${pos.x}" cy="${pos.y}" r="${width/2}" fill="${color}" stroke="${borderColor}" stroke-width="${borderWidth}"/>
+  <text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="central" fill="black" font-size="14px">${label}</text>
+`;
+          }
+        });
         
-        // Create a proper SVG document with correct headers
-        const svgDoctype = '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n';
-        const fullSvgContent = svgDoctype + svgContent;
+        // Add edges to SVG
+        cy.edges().forEach(edge => {
+          const source = edge.source();
+          const target = edge.target();
+          const sourcePos = source.position();
+          const targetPos = target.position();
+          const color = edge.style('line-color');
+          const width = parseFloat(edge.style('width'));
+          
+          // Determine if edge should be dashed based on edge type data
+          const edgeType = edge.data('type');
+          const isDashed = edgeType === 'low';
+          const dashArray = isDashed ? "5,5" : "none";
+          
+          // Calculate edge start and end points at node borders
+          const sourceIsTerminal = source.data('isTerminal');
+          const targetIsTerminal = target.data('isTerminal');
+          
+          // Get node dimensions
+          const sourceRadius = sourceIsTerminal ? 25 : parseFloat(source.style('width')) / 2;
+          const targetRadius = targetIsTerminal ? 25 : parseFloat(target.style('width')) / 2;
+          
+          // Calculate angle from source to target
+          const dx = targetPos.x - sourcePos.x;
+          const dy = targetPos.y - sourcePos.y;
+          const angle = Math.atan2(dy, dx);
+          
+          // Calculate start point (at edge of source node)
+          const startX = sourcePos.x + Math.cos(angle) * sourceRadius;
+          const startY = sourcePos.y + Math.sin(angle) * sourceRadius;
+          
+          // Calculate end point (at edge of target node)
+          const endX = targetPos.x - Math.cos(angle) * targetRadius;
+          const endY = targetPos.y - Math.sin(angle) * targetRadius;
+          
+          // Draw the path
+          svgContent += `  <path d="M${startX},${startY} L${endX},${endY}" fill="none" stroke="${color}" stroke-width="${width}" stroke-dasharray="${dashArray}" marker-end="url(#arrowhead)"/>
+`;
+        });
         
-        // Download the SVG file
-        downloadFile(fullSvgContent, '.svg', 'image/svg+xml');
+        // Close SVG tag
+        svgContent += '</svg>';
+        
+        // Create a blob and download
+        const blob = new Blob([svgContent], {type: 'image/svg+xml;charset=utf-8'});
+        downloadFile(blob, '.svg', 'image/svg+xml');
       } catch (err) {
         console.error('SVG export error:', err);
-        setError('Failed to export SVG from Cytoscape: ' + (err instanceof Error ? err.message : String(err)));
+        setError('Failed to export SVG: ' + (err instanceof Error ? err.message : String(err)));
       }
       return; // Exit early for cytoscape mode
     }
