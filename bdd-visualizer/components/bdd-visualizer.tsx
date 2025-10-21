@@ -278,10 +278,17 @@ export default function BDDVisualizer() {
         const pts = e.points.map(([x, y]) => ({ x, y: (layout!.bbox.height - y) }))
         const isDashed = e.style === "dashed"
         const isHighlighted = (() => {
-          const tailNode = bddData.nodes[tail]
-          const headNode = bddData.nodes[head]
-          return !!(tailNode && tailNode.highlight) && !!(headNode && headNode.highlight)
-        })()
+          const tailNode = bddData.nodes[tail];
+          const headNode = bddData.nodes[head];
+          if (!(tailNode?.highlight && headNode?.highlight)) return false;
+          // Nếu có set biến ở node cha, chỉ highlight nhánh khớp
+          if (showEvalPath && tailNode?.var && Object.prototype.hasOwnProperty.call(variableValues, tailNode.var)) {
+          const wantHigh = variableValues[tailNode.var] === 1;
+          const branchIsHigh = !isDashed; // dashed = low, solid = high
+          if (wantHigh !== branchIsHigh) return false;
+          }
+          return true;
+        })();
 
         ctx.save()
         ctx.setLineDash(isDashed ? [5, 5] : [])
@@ -324,7 +331,10 @@ export default function BDDVisualizer() {
           if (lowPos) {
             const lowNode = bddData.nodes[node.low]
             const isLowHighlighted = !!(lowNode && lowNode.highlight)
-            const isEdgeHighlighted = isNodeHighlighted && isLowHighlighted
+            let isEdgeHighlighted = isNodeHighlighted && isLowHighlighted;
+            if (showEvalPath && node.var && Object.prototype.hasOwnProperty.call(variableValues, node.var)) {
+              isEdgeHighlighted = isEdgeHighlighted && variableValues[node.var] === 0;
+            }
             ctx.save()
             ctx.setLineDash([5, 5])
             if (isEdgeHighlighted) {
@@ -366,7 +376,10 @@ export default function BDDVisualizer() {
           if (highPos) {
             const highNode = bddData.nodes[node.high]
             const isHighHighlighted = !!(highNode && highNode.highlight)
-            const isEdgeHighlighted = isNodeHighlighted && isHighHighlighted
+            let isEdgeHighlighted = isNodeHighlighted && isHighHighlighted;
+            if (showEvalPath && node.var && Object.prototype.hasOwnProperty.call(variableValues, node.var)) {
+              isEdgeHighlighted = isEdgeHighlighted && variableValues[node.var] === 1;
+            }
             ctx.save()
             ctx.setLineDash([])
             if (isEdgeHighlighted) {
@@ -520,33 +533,25 @@ export default function BDDVisualizer() {
       })
 
       if (node.low && visibleNodes.has(node.low)) {
-        const lowNode = data.nodes[node.low]
-        elements.push({ 
-          data: { 
-            id: `${node.id}->${node.low}`, 
-            source: node.id, 
-            target: node.low, 
-            type: "low"
-          },
-          classes: (node.highlight && lowNode?.highlight) ? 'highlighted' : ''
-        })
+        const lowNode = data.nodes[node.low];
+        const allowByEval = !(showEvalPath && node.var && Object.prototype.hasOwnProperty.call(variableValues, node.var)) || variableValues[node.var] === 0;
+        elements.push({
+          data: { id: `${node.id}->${node.low}`, source: node.id, target: node.low, type: "low" },
+          classes: (allowByEval && node.highlight && lowNode?.highlight) ? 'highlighted' : ''
+        });
       }
 
       if (node.high && visibleNodes.has(node.high)) {
-        const highNode = data.nodes[node.high]
-        elements.push({ 
-          data: { 
-            id: `${node.id}->${node.high}`, 
-            source: node.id, 
-            target: node.high, 
-            type: "high"
-          },
-          classes: (node.highlight && highNode?.highlight) ? 'highlighted' : ''
-        })
+        const highNode = data.nodes[node.high];
+        const allowByEval = !(showEvalPath && node.var && Object.prototype.hasOwnProperty.call(variableValues, node.var)) || variableValues[node.var] === 1;
+        elements.push({
+          data: { id: `${node.id}->${node.high}`, source: node.id, target: node.high, type: "high" },
+          classes: (allowByEval && node.highlight && highNode?.highlight) ? 'highlighted' : ''
+        });
       }
-    })
+    });
 
-    return elements
+    return elements;
   }
 
   const ensureCytoscape = async () => {
@@ -1101,12 +1106,12 @@ export default function BDDVisualizer() {
         const width = bb.w;
         const height = bb.h;
         
-        // Create SVG content with defs for arrow markers
+        // Create SVG content with defs for arrow markers - standardized size
         let svgContent = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${bb.x1} ${bb.y1} ${width} ${height}">
   <defs>
-    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#000"/>
+    <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+      <polygon points="0 0, 6 2, 0 4" fill="#000"/>
     </marker>
   </defs>
   <rect x="${bb.x1}" y="${bb.y1}" width="${width}" height="${height}" fill="white"/>
@@ -1436,7 +1441,7 @@ export default function BDDVisualizer() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `bdd-${formula.replace(/[^a-zA-Z0-9]/g, "_")}.tex`
+      a.download = "bdd.tex"
       a.click()
       URL.revokeObjectURL(url)
     } catch (err) {
@@ -1494,7 +1499,7 @@ export default function BDDVisualizer() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `bdd-${formula.replace(/[^a-zA-Z0-9]/g, "_")}.json`
+      a.download = "bdd.json"
       a.click()
       URL.revokeObjectURL(url)
     } catch (err) {
@@ -1802,7 +1807,25 @@ export default function BDDVisualizer() {
               </aside>
             </div>
 
-            {/* Export and controls below canvas */}
+            {/* Controls and export below canvas */}
+            <div className={styles.controls}>
+              <button onClick={handleReset} className={styles.controlButton}>
+                Reset
+              </button>
+              <button onClick={handlePrev} disabled={currentStep === 0} className={styles.controlButton}>
+                Previous
+              </button>
+              <button onClick={handlePlayPause} className={styles.controlButton}>
+                {isPlaying ? "Pause" : "Play"}
+              </button>
+              <button onClick={handleNext} disabled={currentStep >= steps.length - 1} className={styles.controlButton}>
+                Next
+              </button>
+              <span className={styles.stepCounter}>
+                Step {currentStep + 1} of {steps.length}
+              </span>
+            </div>
+
             <div className={styles.exportSection}>
               <h3>Export Options:</h3>
               <div className={styles.exportButtons}>
@@ -1822,24 +1845,6 @@ export default function BDDVisualizer() {
                   Export as JSON
                 </button>
               </div>
-            </div>
-
-            <div className={styles.controls}>
-              <button onClick={handleReset} className={styles.controlButton}>
-                Reset
-              </button>
-              <button onClick={handlePrev} disabled={currentStep === 0} className={styles.controlButton}>
-                Previous
-              </button>
-              <button onClick={handlePlayPause} className={styles.controlButton}>
-                {isPlaying ? "Pause" : "Play"}
-              </button>
-              <button onClick={handleNext} disabled={currentStep >= steps.length - 1} className={styles.controlButton}>
-                Next
-              </button>
-              <span className={styles.stepCounter}>
-                Step {currentStep + 1} of {steps.length}
-              </span>
             </div>
           </>
         )}
