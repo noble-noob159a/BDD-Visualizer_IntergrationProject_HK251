@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pyparsing
+python-dotenv
+loguru
+graphviz
+sympy
+dot2tex
