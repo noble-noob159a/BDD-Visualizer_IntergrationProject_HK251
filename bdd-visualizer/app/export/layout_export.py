@@ -59,7 +59,7 @@ def _build_id_maps(root: BDDNode) -> Tuple[Dict[str, str], Dict[str, str]]:
     return gv_to_json, json_to_gv
 
 
-def bdd2layout(r: BDDNode | Digraph, highlight: bool = False) -> Dict[str, Any]:
+def bdd2layout(r: BDDNode | Digraph, highlight: str = None) -> Dict[str, Any]:
     """
     Build Graphviz layout and return JSON with nodes, edge splines and bbox.
     Coordinates are returned in pixels, using 72 px per inch (Graphviz plain units).

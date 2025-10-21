@@ -11,7 +11,7 @@ logger = get_logger('BDD API2')
 def export_latex(data: dict = Body(...)):
     #data = request.json()
     formula_str = data.get("formula")
-    #logger.info(f"Key? {formula_str}")
+    eval_path = data.get("eval_path", None)
     graph_type = data.get("graph_type", "robdd")
     isROBDD = graph_type == 'robdd'
     if not formula_str:
@@ -32,7 +32,7 @@ def export_latex(data: dict = Body(...)):
                 "message": f"Formula not found in cache: '{formula_str}'. Please call /generate first."
             })
 
-        tex_code = bdd2tex(bdd.robdd_root if isROBDD else bdd.root, highlight=True)
+        tex_code = bdd2tex(bdd.robdd_root if isROBDD else bdd.root, highlight=eval_path)
 
 
         return {
@@ -128,7 +128,7 @@ def export_layout(data: dict = Body(...)):
             bdd.eval_path(bdd.robdd_root if isROBDD else bdd.root, eval_path)
 
         root = bdd.robdd_root if isROBDD else bdd.root
-        layout = bdd2layout(root, highlight=True)
+        layout = bdd2layout(root, highlight=eval_path)
         return {
             "status": "success",
             "formula": formula_str,

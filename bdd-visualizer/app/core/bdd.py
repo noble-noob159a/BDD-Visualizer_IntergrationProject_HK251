@@ -183,19 +183,23 @@ class BDD:
                 queue.appendleft(node.low)
 
     @staticmethod
-    def to_graphviz(root, filename="bdd_graph", show_expr=True, step=True, highlight=True, to_latex=False, type='ROBDD'):
+    def to_graphviz(root, filename="bdd_graph", step=True, highlight:str=None, to_latex=False, type='ROBDD'):
         if root is None:
             raise ValueError("Null root")
         
+        if isinstance(highlight,str):
+            ls = [x.split(':') for x in highlight.split(' ') ]
+            highlight = {k:int(v) for [k,v] in ls}
+
         default_fill = 'white' if to_latex else 'lightblue'
-        highlight_fill = 'red!50'
+        highlight_fill = 'orange'
 
         if to_latex:
             step = False
 
         dot = Digraph(comment="Binary Decision Diagram (BFS)", format="png")
 
-        dot.attr(ranksep="0.3", nodesep="0.2")
+        #dot.attr(ranksep="0.7", nodesep="0.7")
 
         visited = set()
         is_bdd = True if type == 'BDD' else False
@@ -238,7 +242,7 @@ class BDD:
             if node.low:
                 queue.append(node.low)
                 edge_attrs = {"style": "dashed"}
-                if highlight and getattr(node, "highlight", False) and getattr(node.low, "highlight", False):
+                if highlight and getattr(node, "highlight", False) and getattr(node.low, "highlight", False) and (node.var not in highlight or highlight[node.var]==0):
                     edge_attrs["color"] = highlight_fill
                     edge_attrs["penwidth"] = "3"
                 dot.edge(str(node.id), str(node.low.id), **edge_attrs)
@@ -246,7 +250,7 @@ class BDD:
             if node.high:
                 queue.append(node.high)
                 edge_attrs = {"style": "solid"}
-                if highlight and getattr(node, "highlight", False) and getattr(node.high, "highlight", False):
+                if highlight and getattr(node, "highlight", False) and getattr(node.high, "highlight", False) and (node.var not in highlight or highlight[node.var]==1):
                     edge_attrs["color"] = highlight_fill
                     edge_attrs["penwidth"] = "3"
                 dot.edge(str(node.id), str(node.high.id), **edge_attrs)
