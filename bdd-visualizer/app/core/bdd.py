@@ -187,25 +187,15 @@ class BDD:
         if root is None:
             raise ValueError("Null root")
         
-        default_fill = 'blue!30' if to_latex else '#90caf9'
+        default_fill = 'white' if to_latex else 'lightblue'
         highlight_fill = 'red!50'
 
         if to_latex:
-            show_expr = False
             step = False
 
         dot = Digraph(comment="Binary Decision Diagram (BFS)", format="png")
 
         dot.attr(ranksep="0.3", nodesep="0.2")
-        # FIX 1: Set global node attributes to enforce shape and size consistently.
-        dot.node_attr.update(
-            shape='circle',  # default for normal nodes
-            style='filled',
-            fontsize='10',
-            width='0.6',
-            height='0.6',
-            fixedsize='true',
-        )
 
         visited = set()
         is_bdd = True if type == 'BDD' else False
@@ -222,30 +212,18 @@ class BDD:
 
             if node.var is None:
                 label = str(node.expr)
-                fillcolor = "blue!50"
+                fillcolor = "lightgray"
                 if highlight and node.highlight:
                     fillcolor = highlight_fill
-                # force rectangle for terminal nodes
                 dot.node(
                     str(node.id),
                     label=label,
                     fillcolor=fillcolor,
-
-                    _attributes={'shape': 'rect',
-                                'fontsize': '10',
-                                 'width': '0.6',
-                                 'height': '0.4',
-                                 'fixedsize': 'true',}
+                    style="filled",
+                    shape="box"
                 )
             else:
-                # FIX 2: Sanitize the expression string to remove any problematic characters.
-                clean_expr_str = getattr(node, "expr_str", "") or ""
-                clean_expr_str = clean_expr_str.replace('\r', '').replace('\n', ' ')
-
-                st = f' - ({node.step})' if step and node.step is not None else ''
-                expr = f'\\n({clean_expr_str})' if show_expr and clean_expr_str else ''
-                label = f"{node.var}{st}{expr}"
-                
+                label = str(node.var)
                 fillcolor = default_fill
                 if highlight and node.highlight:
                     fillcolor = highlight_fill
@@ -253,11 +231,8 @@ class BDD:
                     str(node.id),
                     label=label,
                     fillcolor=fillcolor,
-                    _attributes={'shape': 'circle',
-                                'fontsize': '10',
-                                 'width': '0.4',
-                                 'height': '0.4',
-                                 'fixedsize': 'true',}
+                    style="filled",
+                    shape="circle"
                 )
             
             if node.low:

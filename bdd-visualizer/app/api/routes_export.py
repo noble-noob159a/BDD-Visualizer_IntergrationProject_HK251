@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body
 from app.utils import*
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse
 from app.core import*
 from app.export import*
 
@@ -13,9 +13,6 @@ def export_latex(data: dict = Body(...)):
     formula_str = data.get("formula")
     #logger.info(f"Key? {formula_str}")
     graph_type = data.get("graph_type", "robdd")
-    var_order = data.get("var_order", None)
-    auto_order = data.get("auto_order", None)
-    eval_path = data.get("eval_path", None)
     isROBDD = graph_type == 'robdd'
     if not formula_str:
         return JSONResponse(status_code=400, content={
@@ -90,6 +87,7 @@ def export_json(data: dict = Body(...)):
             "status": "error",
             "message": str(e)
         })
+
 
 @router.post("/layout")
 def export_layout(data: dict = Body(...)):

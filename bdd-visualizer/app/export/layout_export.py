@@ -4,7 +4,9 @@ from typing import Dict, Any, List, Tuple
 from graphviz import Digraph
 
 from app.core.bdd import BDD, BDDNode
+from app.utils import*
 
+logger = get_logger('BDD Layout Exporter')
 
 def _collect_edge_styles(root: BDDNode) -> Dict[Tuple[str, str], str]:
     styles: Dict[Tuple[str, str], str] = {}
@@ -63,7 +65,7 @@ def bdd2layout(r: BDDNode | Digraph, highlight: bool = False) -> Dict[str, Any]:
     Coordinates are returned in pixels, using 72 px per inch (Graphviz plain units).
     Also includes a mapping keyed by the JSON node ids used in export-json
     so the frontend can render with consistent identities.
-    """
+    """ 
     if isinstance(r, BDDNode):
         dot = BDD.to_graphviz(r, to_latex=False, highlight=highlight)
         root_node = r
