@@ -36,3 +36,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+bdd_graph_robdd
+bdd_graph_robdd.png
+bdd_graph_robdd.svg
