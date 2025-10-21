@@ -2,43 +2,19 @@
 \begin{tikzpicture}[>=latex,line join=bevel,scale=1,>=stealth,thick]
 %%
 \begin{scope}[draw, minimum width=1.1cm, minimum height=1cm]
-  \node (89) at (133.0bp,378.0bp) [draw,fill=orange,circle] {$a$};
-  \node (87) at (106.0bp,306.0bp) [draw,fill=orange,circle] {$c$};
-  \node (88) at (160.0bp,306.0bp) [draw,fill=orange,circle] {$b$};
-  \node (85) at (56.0bp,234.0bp) [draw,fill=orange,circle] {$d$};
-  \node (84) at (148.0bp,162.0bp) [draw,fill=white,circle] {$d$};
-  \node (86) at (156.0bp,234.0bp) [draw,fill=orange,circle] {$c$};
-  \node (83) at (202.0bp,162.0bp) [draw,fill=orange,circle] {$d$};
-  \node (82) at (56.0bp,162.0bp) [draw,fill=orange,circle] {$e$};
-  \node (81) at (18.0bp,90.0bp) [draw,fill=white,circle] {$e$};
-  \node (79) at (148.0bp,90.0bp) [draw,fill=orange,circle] {$f$};
-  \node (60) at (202.0bp,18.0bp) [draw,fill=orange,rectangle] {$True$};
-  \node (61) at (102.0bp,18.0bp) [draw,fill=orange,rectangle] {$False$};
-  \node (80) at (202.0bp,90.0bp) [draw,fill=white,circle] {$e$};
+  \node (35) at (76.0bp,234.0bp) [draw,fill=orange,circle] {$a$};
+  \node (33) at (53.0bp,90.0bp) [draw,fill=white,circle] {$c$};
+  \node (34) at (99.0bp,162.0bp) [draw,fill=orange,circle] {$b$};
+  \node (28) at (27.0bp,18.0bp) [draw,fill=lightgray,rectangle] {$False$};
+  \node (27) at (99.0bp,18.0bp) [draw,fill=orange,rectangle] {$True$};
 \end{scope}
 \begin{scope}[line width=1pt]
-  \draw [orange,->,dashed] (89) ..controls (123.94bp,353.52bp) and (120.56bp,344.75bp)  .. (87);
-  \draw [orange,->,solid] (89) ..controls (142.06bp,353.52bp) and (145.44bp,344.75bp)  .. (88);
-  \draw [orange,->,dashed] (87) ..controls (89.715bp,282.2bp) and (81.648bp,270.91bp)  .. (85);
-  \draw [->,solid] (87) ..controls (114.12bp,270.15bp) and (121.35bp,240.86bp)  .. (129.0bp,216.0bp) .. controls (131.65bp,207.39bp) and (134.85bp,198.12bp)  .. (84);
-  \draw [orange,->,dashed] (88) ..controls (158.64bp,281.25bp) and (158.21bp,273.73bp)  .. (86);
-  \draw [orange,->,solid] (88) ..controls (172.61bp,279.14bp) and (178.84bp,264.99bp)  .. (183.0bp,252.0bp) .. controls (189.04bp,233.13bp) and (193.73bp,211.38bp)  .. (83);
-  \draw [orange,->,dashed] (85) ..controls (56.0bp,209.25bp) and (56.0bp,201.73bp)  .. (82);
-  \draw [->,solid] (85) ..controls (40.691bp,207.96bp) and (33.171bp,193.63bp)  .. (29.0bp,180.0bp) .. controls (23.001bp,160.4bp) and (20.263bp,137.43bp)  .. (81);
-  \draw [->,dashed] (84) ..controls (148.0bp,136.41bp) and (148.0bp,127.73bp)  .. (79);
-  \draw [->,solid] (84) ..controls (186.19bp,136.63bp) and (228.08bp,109.71bp)  .. (229.0bp,108.0bp) .. controls (239.58bp,88.437bp) and (230.96bp,64.162bp)  .. (60);
-  \draw [->,solid] (86) ..controls (171.51bp,209.39bp) and (179.37bp,197.43bp)  .. (83);
-  \draw [orange,->,dashed] (86) ..controls (136.56bp,209.4bp) and (126.38bp,194.71bp)  .. (121.0bp,180.0bp) .. controls (105.23bp,136.87bp) and (101.84bp,83.318bp)  .. (61);
-  \draw [orange,->,dashed] (83) ..controls (232.23bp,143.52bp) and (252.97bp,128.02bp)  .. (262.0bp,108.0bp) .. controls (268.58bp,93.414bp) and (268.58bp,86.586bp)  .. (262.0bp,72.0bp) .. controls (257.22bp,61.399bp) and (249.15bp,52.066bp)  .. (60);
-  \draw [->,solid] (83) ..controls (202.0bp,136.41bp) and (202.0bp,127.73bp)  .. (80);
-  \draw [orange,->,dashed] (82) ..controls (83.887bp,139.78bp) and (105.56bp,123.29bp)  .. (79);
-  \draw [->,solid] (82) ..controls (69.108bp,120.54bp) and (83.51bp,76.078bp)  .. (61);
-  \draw [->,dashed] (81) ..controls (63.682bp,71.621bp) and (124.24bp,48.582bp)  .. (60);
-  \draw [->,solid] (81) ..controls (42.529bp,68.559bp) and (58.53bp,55.225bp)  .. (61);
-  \draw [->,solid] (79) ..controls (165.26bp,66.629bp) and (173.93bp,55.393bp)  .. (60);
-  \draw [orange,->,dashed] (79) ..controls (133.53bp,66.984bp) and (127.32bp,57.526bp)  .. (61);
-  \draw [->,solid] (80) ..controls (202.0bp,64.407bp) and (202.0bp,55.726bp)  .. (60);
-  \draw [->,dashed] (80) ..controls (174.28bp,69.593bp) and (153.75bp,55.225bp)  .. (61);
+  \draw [->,dashed] (35) ..controls (69.358bp,191.99bp) and (62.294bp,148.38bp)  .. (33);
+  \draw [orange,->,solid] (35) ..controls (83.742bp,209.44bp) and (86.482bp,201.1bp)  .. (34);
+  \draw [->,dashed] (33) ..controls (44.101bp,65.04bp) and (40.589bp,55.585bp)  .. (28);
+  \draw [->,solid] (33) ..controls (67.979bp,66.206bp) and (74.982bp,55.549bp)  .. (27);
+  \draw [->,dashed] (34) ..controls (83.486bp,137.39bp) and (75.626bp,125.43bp)  .. (33);
+  \draw [orange,->,solid] (34) ..controls (99.0bp,120.47bp) and (99.0bp,79.222bp)  .. (27);
 \end{scope}
 %
 \end{tikzpicture}
