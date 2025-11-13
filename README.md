@@ -1,7 +1,7 @@
 # Đồ Án Tổng Hợp - Trí Tuệ Nhân Tạo - HK251  
 Tên dự án: BDD Visualizer --- Minh họa trực quan cấu trúc dữ liệu Binary Decision Diagrams  
 GVHD: Trịnh Văn Giang
-
+ Link trang web: https://bdd-visualizer-jpg0mcbjh-tleeds1s-projects.vercel.app/
 
 # BDD Visualizer
 
