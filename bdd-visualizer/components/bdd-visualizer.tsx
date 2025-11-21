@@ -1594,13 +1594,18 @@ export default function BDDVisualizer() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <h1>BDD Visualizer</h1>
-        <p>Binary Decision Diagram Educational Tool</p>
-      </header>
+      <div className={styles.splitLayout}>
+        <div className={styles.leftPane}>
+          <div className={styles.leftCanvas}>
+            <header className={styles.header}>
+              <div className={styles.titleRow}>
+                <img src="/bk_logo.png" alt="Logo" className={styles.siteLogo} />
+                <h1>BDD Visualizer</h1>
+              </div>
+              <p>Binary Decision Diagram Educational Tool</p>
+            </header>
 
-      <div className={styles.content}>
-        <div className={styles.inputSection}>
+            <div className={styles.inputSection}>
           <div className={styles.formGroup}>
             <label htmlFor="formula">Boolean Formula:</label>
             <input
@@ -1626,7 +1631,7 @@ export default function BDDVisualizer() {
                   checked={graphType === "bdd"}
                   onChange={(e) => setGraphType(e.target.value as "bdd" | "robdd")}
                 />
-                BDD (Binary Decision Diagram)
+                BDD
               </label>
               <label className={styles.radioLabel}>
                 <input
@@ -1635,7 +1640,7 @@ export default function BDDVisualizer() {
                   checked={graphType === "robdd"}
                   onChange={(e) => setGraphType(e.target.value as "bdd" | "robdd")}
                 />
-                ROBDD (Reduced Ordered BDD)
+                ROBDD
               </label>
             </div>
           </div>
@@ -1650,7 +1655,7 @@ export default function BDDVisualizer() {
                   checked={orderingMethod === "none"}
                   onChange={() => setOrderingMethod("none")}
                 />
-                Default Order
+                Default
               </label>
               <label className={styles.radioLabel}>
                 <input
@@ -1659,7 +1664,7 @@ export default function BDDVisualizer() {
                   checked={orderingMethod === "auto"}
                   onChange={() => setOrderingMethod("auto")}
                 />
-                Auto Optimize Order
+                Auto Optimize
               </label>
               <label className={styles.radioLabel}>
                 <input
@@ -1668,7 +1673,7 @@ export default function BDDVisualizer() {
                   checked={orderingMethod === "custom"}
                   onChange={() => setOrderingMethod("custom")}
                 />
-                Custom Order
+                Custom
               </label>
             </div>
             
@@ -1753,101 +1758,50 @@ export default function BDDVisualizer() {
               <strong>Error:</strong> {error}
             </div>
           )}
+            </div>
+
+            {bddData && steps.length > 0 && (
+              <>
+                <div className={styles.explanationTop}>
+                  <h3 style={{fontWeight: 700}}>Current Step Explanation:</h3>
+                  <p>{steps[currentStep]?.explanation}</p>
+                  <p className={styles.tip}>Tip: Hold and drag nodes to adjust the diagram position as needed.</p>
+                </div>
+
+              {/* Legend removed per design */}
+
+                <div className={styles.controls}>
+                  <button onClick={handleReset} className={styles.controlButton}>Reset</button>
+                  <button onClick={handlePrev} disabled={currentStep === 0} className={styles.controlButton}>Previous</button>
+                  <button onClick={handlePlayPause} className={styles.controlButton}>{isPlaying ? "Pause" : "Play"}</button>
+                  <button onClick={handleNext} disabled={currentStep >= steps.length - 1} className={styles.controlButton}>Next</button>
+                  <span className={styles.stepCounter}>Step {currentStep + 1} of {steps.length}</span>
+                </div>
+
+                <div className={styles.exportSection}>
+                <h3>Export:</h3>
+                <div className={styles.exportButtons}>
+                  <button onClick={handleExportPNG} className={styles.exportButton}>PNG</button>
+                  <button onClick={handleExportSVG} className={styles.exportButton}>SVG</button>
+                  <button onClick={handleExportTikZ} className={styles.exportButton}>TikZ</button>
+                  <button onClick={handleExportJSON} className={styles.exportButton}>JSON</button>
+                </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        {bddData && steps.length > 0 && (
-          <>
-            {/* Explanation at top of canvas */}
-            <div className={styles.explanationTop}>
-              <h3 style={{fontWeight: 700}}>Current Step Explanation:</h3>
-              <p>{steps[currentStep]?.explanation}</p>
-              <p className={styles.tip}>Tip: Hold and drag nodes to adjust the diagram position as needed.</p>
+        <div className={styles.rightPane}>
+          <div className={styles.canvasContainer} ref={canvasContainerRef}>
+            <div ref={cyContainerRef} className={styles.cytoscapeContainer} />
+            <div className={styles.zoomControls}>
+              <button onClick={() => handleZoomIn()} className={styles.zoomButton} title="Zoom In">+</button>
+              <button onClick={() => handleZoomOut()} className={styles.zoomButton} title="Zoom Out">-</button>
+              <button onClick={() => handleResetZoom()} className={styles.zoomButton} title="Reset Zoom">↺</button>
             </div>
-
-            {/* Canvas with right vertical legend */}
-            <div className={styles.canvasRow}>
-              <div className={styles.canvasContainer}>
-                <div ref={cyContainerRef} className={styles.cytoscapeContainer} />
-                <div className={styles.zoomControls}>
-                  <button onClick={() => handleZoomIn()} className={styles.zoomButton} title="Zoom In">+</button>
-                  <button onClick={() => handleZoomOut()} className={styles.zoomButton} title="Zoom Out">-</button>
-                  <button onClick={() => handleResetZoom()} className={styles.zoomButton} title="Reset Zoom">↺</button>
-                </div>
-              </div>
-
-
-              <aside className={styles.legendSidebar}>
-                <h3>Legend</h3>
-                <div className={styles.legendItemsVertical}>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendCircle} style={{ backgroundColor: "#90caf9" }}></div>
-                    <span>Decision Node</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendSquare} style={{ backgroundColor: "#81c784" }}></div>
-                    <span>Terminal Node (1)</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendSquare} style={{ backgroundColor: "#e57373" }}></div>
-                    <span>Terminal Node (0)</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendCircle} style={{ backgroundColor: "#ffeb3b" }}></div>
-                    <span>Current Step</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendLine} style={{ borderTop: "2px solid #333", width: 32 }}></div>
-                    <span>High Branch (var=1)</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendLine} style={{ borderTop: "2px dashed #666", width: 32 }}></div>
-                    <span>Low Branch (var=0)</span>
-                  </div>
-                </div>
-              </aside>
-            </div>
-
-            {/* Controls and export below canvas */}
-            <div className={styles.controls}>
-              <button onClick={handleReset} className={styles.controlButton}>
-                Reset
-              </button>
-              <button onClick={handlePrev} disabled={currentStep === 0} className={styles.controlButton}>
-                Previous
-              </button>
-              <button onClick={handlePlayPause} className={styles.controlButton}>
-                {isPlaying ? "Pause" : "Play"}
-              </button>
-              <button onClick={handleNext} disabled={currentStep >= steps.length - 1} className={styles.controlButton}>
-                Next
-              </button>
-              <span className={styles.stepCounter}>
-                Step {currentStep + 1} of {steps.length}
-              </span>
-            </div>
-
-            <div className={styles.exportSection}>
-              <h3>Export Options:</h3>
-              <div className={styles.exportButtons}>
-                <button onClick={handleExportPNG} className={styles.exportButton}>
-                  Export as PNG
-                </button>
-                <button 
-                    onClick={handleExportSVG} 
-                    className={styles.exportButton}
-                  >
-                    Export as SVG
-                </button>
-                <button onClick={handleExportTikZ} className={styles.exportButton}>
-                  Export as TikZ (LaTeX)
-                </button>
-                <button onClick={handleExportJSON} className={styles.exportButton}>
-                  Export as JSON
-                </button>
-              </div>
-            </div>
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   )
