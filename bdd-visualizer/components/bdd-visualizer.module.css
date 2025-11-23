@@ -1,13 +1,26 @@
 .container {
   min-height: 100vh;
-  background: #667eea;
-  padding: 20px;
+  background: #ffffff;
+  padding: 0;
 }
 
 .header {
   text-align: center;
-  color: white;
-  margin-bottom: 30px;
+  color: #000;
+  margin-bottom: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.siteLogo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
 }
 
 .header h1 {
@@ -22,17 +35,43 @@
   opacity: 0.9;
 }
 
-.content {
-  max-width: 1200px;
-  margin: 0 auto;
+.splitLayout {
+  display: flex;
+  height: 100vh;
+}
+
+.leftPane {
+  width: 30%;
+  min-width: 320px;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.rightPane {
+  width: 70%;
+  padding: 0;
+  height: 100vh;
+  display: flex;
+  background: #f0f0f0;
+}
+
+.leftCanvas {
+  background: white;
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  color: #000;
 }
 
 .inputSection {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 30px;
+  background: transparent;
+  padding: 20px;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0;
 }
 
 .formGroup {
@@ -65,14 +104,14 @@
 .hint {
   display: block;
   margin-top: 6px;
-  color: #666;
+  color: #000;
   font-size: 0.875rem;
 }
 
 .tip {
   display: block;
   margin-top: 12px;
-  color: #667eea;
+  color: #000;
   font-weight: 700;
   font-size: 1rem;
   line-height: 1.4;
@@ -84,16 +123,16 @@
 
 .currentOrderContainer {
   margin-top: 8px;
-  padding: 5px;
-  background-color: #f5f5f5;
-  border-radius: 4px;
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
 }
 
 .variableValuesContainer {
   margin-top: 10px;
-  padding: 10px;
-  background-color: #f5f5f5;
-  border-radius: 4px;
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
 }
 
 .variableValuesGrid {
@@ -139,7 +178,7 @@
   gap: 8px;
   cursor: pointer;
   font-weight: 400;
-  color: #555;
+  color: #000;
 }
 
 .radioLabel input[type="radio"] {
@@ -189,21 +228,22 @@
 .canvasContainer {
   position: relative;
   background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
-  height: 100vh; /* Fill full screen height for diagram */
+  height: 100%;
 }
 
 .cytoscapeContainer {
   width: 100%;
   height: 100%;
   min-height: 400px;
+  background: #f0f0f0;
 }
 
 .canvas {
@@ -252,24 +292,24 @@
 }
 
 .explanationTop {
-  background: white;
-  padding: 15px 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-  text-align: center;
+  background: transparent;
+  padding: 20px;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0;
+  text-align: left;
 }
 
 .explanationTop h3 {
-  margin: 0 0 10px 0;
-  color: #667eea;
-  font-size: 1.2rem;
+  margin: 0 0 8px 0;
+  color: #000;
+  font-size: 1.1rem;
 }
 
 .explanationTop p {
   margin: 0;
-  color: #555;
-  font-size: 1rem;
+  color: #000;
+  font-size: 0.95rem;
   line-height: 1.5;
 }
 
@@ -297,32 +337,32 @@
 
 /* Added export section styles */
 .exportSection {
-  background: white;
+  background: transparent;
   padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0;
 }
 
 .exportSection h3 {
-  margin: 0 0 16px 0;
-  color: #667eea;
-  font-size: 1.2rem;
+  margin: 0 0 8px 0;
+  color: #000;
+  font-size: 1rem;
 }
 
 .exportButtons {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .exportButton {
-  padding: 10px 20px;
+  padding: 8px 12px;
   background: #4caf50;
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.3s, transform 0.2s;
@@ -334,15 +374,15 @@
 }
 
 .controls {
-  background: white;
+  background: transparent;
   padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0;
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
 }
 
@@ -461,7 +501,7 @@
   }
 
   .inputSection {
-    padding: 20px;
+    padding: 10px 0;
   }
 
   .canvas {
@@ -470,11 +510,8 @@
 
   /* Added responsive styles for export buttons */
   .exportButtons {
-    flex-direction: column;
-  }
-
-  .exportButton {
-    width: 100%;
+    flex-direction: row;
+    flex-wrap: nowrap;
   }
 
   .controls {

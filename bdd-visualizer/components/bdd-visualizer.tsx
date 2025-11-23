@@ -278,10 +278,17 @@ export default function BDDVisualizer() {
         const pts = e.points.map(([x, y]) => ({ x, y: (layout!.bbox.height - y) }))
         const isDashed = e.style === "dashed"
         const isHighlighted = (() => {
-          const tailNode = bddData.nodes[tail]
-          const headNode = bddData.nodes[head]
-          return !!(tailNode && tailNode.highlight) && !!(headNode && headNode.highlight)
-        })()
+          const tailNode = bddData.nodes[tail];
+          const headNode = bddData.nodes[head];
+          if (!(tailNode?.highlight && headNode?.highlight)) return false;
+          // Nếu có set biến ở node cha, chỉ highlight nhánh khớp
+          if (showEvalPath && tailNode?.var && Object.prototype.hasOwnProperty.call(variableValues, tailNode.var)) {
+          const wantHigh = variableValues[tailNode.var] === 1;
+          const branchIsHigh = !isDashed; // dashed = low, solid = high
+          if (wantHigh !== branchIsHigh) return false;
+          }
+          return true;
+        })();
 
         ctx.save()
         ctx.setLineDash(isDashed ? [5, 5] : [])
@@ -324,7 +331,10 @@ export default function BDDVisualizer() {
           if (lowPos) {
             const lowNode = bddData.nodes[node.low]
             const isLowHighlighted = !!(lowNode && lowNode.highlight)
-            const isEdgeHighlighted = isNodeHighlighted && isLowHighlighted
+            let isEdgeHighlighted = isNodeHighlighted && isLowHighlighted;
+            if (showEvalPath && node.var && Object.prototype.hasOwnProperty.call(variableValues, node.var)) {
+              isEdgeHighlighted = isEdgeHighlighted && variableValues[node.var] === 0;
+            }
             ctx.save()
             ctx.setLineDash([5, 5])
             if (isEdgeHighlighted) {
@@ -366,7 +376,10 @@ export default function BDDVisualizer() {
           if (highPos) {
             const highNode = bddData.nodes[node.high]
             const isHighHighlighted = !!(highNode && highNode.highlight)
-            const isEdgeHighlighted = isNodeHighlighted && isHighHighlighted
+            let isEdgeHighlighted = isNodeHighlighted && isHighHighlighted;
+            if (showEvalPath && node.var && Object.prototype.hasOwnProperty.call(variableValues, node.var)) {
+              isEdgeHighlighted = isEdgeHighlighted && variableValues[node.var] === 1;
+            }
             ctx.save()
             ctx.setLineDash([])
             if (isEdgeHighlighted) {
@@ -520,33 +533,25 @@ export default function BDDVisualizer() {
       })
 
       if (node.low && visibleNodes.has(node.low)) {
-        const lowNode = data.nodes[node.low]
-        elements.push({ 
-          data: { 
-            id: `${node.id}->${node.low}`, 
-            source: node.id, 
-            target: node.low, 
-            type: "low"
-          },
-          classes: (node.highlight && lowNode?.highlight) ? 'highlighted' : ''
-        })
+        const lowNode = data.nodes[node.low];
+        const allowByEval = !(showEvalPath && node.var && Object.prototype.hasOwnProperty.call(variableValues, node.var)) || variableValues[node.var] === 0;
+        elements.push({
+          data: { id: `${node.id}->${node.low}`, source: node.id, target: node.low, type: "low" },
+          classes: (allowByEval && node.highlight && lowNode?.highlight) ? 'highlighted' : ''
+        });
       }
 
       if (node.high && visibleNodes.has(node.high)) {
-        const highNode = data.nodes[node.high]
-        elements.push({ 
-          data: { 
-            id: `${node.id}->${node.high}`, 
-            source: node.id, 
-            target: node.high, 
-            type: "high"
-          },
-          classes: (node.highlight && highNode?.highlight) ? 'highlighted' : ''
-        })
+        const highNode = data.nodes[node.high];
+        const allowByEval = !(showEvalPath && node.var && Object.prototype.hasOwnProperty.call(variableValues, node.var)) || variableValues[node.var] === 1;
+        elements.push({
+          data: { id: `${node.id}->${node.high}`, source: node.id, target: node.high, type: "high" },
+          classes: (allowByEval && node.highlight && highNode?.highlight) ? 'highlighted' : ''
+        });
       }
-    })
+    });
 
-    return elements
+    return elements;
   }
 
   const ensureCytoscape = async () => {
@@ -1101,12 +1106,12 @@ export default function BDDVisualizer() {
         const width = bb.w;
         const height = bb.h;
         
-        // Create SVG content with defs for arrow markers
+        // Create SVG content with defs for arrow markers - standardized size
         let svgContent = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${bb.x1} ${bb.y1} ${width} ${height}">
   <defs>
-    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#000"/>
+    <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+      <polygon points="0 0, 6 2, 0 4" fill="#000"/>
     </marker>
   </defs>
   <rect x="${bb.x1}" y="${bb.y1}" width="${width}" height="${height}" fill="white"/>
@@ -1436,7 +1441,7 @@ export default function BDDVisualizer() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `bdd-${formula.replace(/[^a-zA-Z0-9]/g, "_")}.tex`
+      a.download = "bdd.tex"
       a.click()
       URL.revokeObjectURL(url)
     } catch (err) {
@@ -1494,7 +1499,7 @@ export default function BDDVisualizer() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `bdd-${formula.replace(/[^a-zA-Z0-9]/g, "_")}.json`
+      a.download = "bdd.json"
       a.click()
       URL.revokeObjectURL(url)
     } catch (err) {
@@ -1589,13 +1594,18 @@ export default function BDDVisualizer() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <h1>BDD Visualizer</h1>
-        <p>Binary Decision Diagram Educational Tool</p>
-      </header>
+      <div className={styles.splitLayout}>
+        <div className={styles.leftPane}>
+          <div className={styles.leftCanvas}>
+            <header className={styles.header}>
+              <div className={styles.titleRow}>
+                <img src="/bk_logo.png" alt="Logo" className={styles.siteLogo} />
+                <h1>BDD Visualizer</h1>
+              </div>
+              <p>Binary Decision Diagram Educational Tool</p>
+            </header>
 
-      <div className={styles.content}>
-        <div className={styles.inputSection}>
+            <div className={styles.inputSection}>
           <div className={styles.formGroup}>
             <label htmlFor="formula">Boolean Formula:</label>
             <input
@@ -1621,7 +1631,7 @@ export default function BDDVisualizer() {
                   checked={graphType === "bdd"}
                   onChange={(e) => setGraphType(e.target.value as "bdd" | "robdd")}
                 />
-                BDD (Binary Decision Diagram)
+                BDD
               </label>
               <label className={styles.radioLabel}>
                 <input
@@ -1630,7 +1640,7 @@ export default function BDDVisualizer() {
                   checked={graphType === "robdd"}
                   onChange={(e) => setGraphType(e.target.value as "bdd" | "robdd")}
                 />
-                ROBDD (Reduced Ordered BDD)
+                ROBDD
               </label>
             </div>
           </div>
@@ -1645,7 +1655,7 @@ export default function BDDVisualizer() {
                   checked={orderingMethod === "none"}
                   onChange={() => setOrderingMethod("none")}
                 />
-                Default Order
+                Default
               </label>
               <label className={styles.radioLabel}>
                 <input
@@ -1654,7 +1664,7 @@ export default function BDDVisualizer() {
                   checked={orderingMethod === "auto"}
                   onChange={() => setOrderingMethod("auto")}
                 />
-                Auto Optimize Order
+                Auto Optimize
               </label>
               <label className={styles.radioLabel}>
                 <input
@@ -1663,7 +1673,7 @@ export default function BDDVisualizer() {
                   checked={orderingMethod === "custom"}
                   onChange={() => setOrderingMethod("custom")}
                 />
-                Custom Order
+                Custom
               </label>
             </div>
             
@@ -1748,101 +1758,50 @@ export default function BDDVisualizer() {
               <strong>Error:</strong> {error}
             </div>
           )}
+            </div>
+
+            {bddData && steps.length > 0 && (
+              <>
+                <div className={styles.explanationTop}>
+                  <h3 style={{fontWeight: 700}}>Current Step Explanation:</h3>
+                  <p>{steps[currentStep]?.explanation}</p>
+                  <p className={styles.tip}>Tip: Hold and drag nodes to adjust the diagram position as needed.</p>
+                </div>
+
+              {/* Legend removed per design */}
+
+                <div className={styles.controls}>
+                  <button onClick={handleReset} className={styles.controlButton}>Reset</button>
+                  <button onClick={handlePrev} disabled={currentStep === 0} className={styles.controlButton}>Previous</button>
+                  <button onClick={handlePlayPause} className={styles.controlButton}>{isPlaying ? "Pause" : "Play"}</button>
+                  <button onClick={handleNext} disabled={currentStep >= steps.length - 1} className={styles.controlButton}>Next</button>
+                  <span className={styles.stepCounter}>Step {currentStep + 1} of {steps.length}</span>
+                </div>
+
+                <div className={styles.exportSection}>
+                <h3>Export:</h3>
+                <div className={styles.exportButtons}>
+                  <button onClick={handleExportPNG} className={styles.exportButton}>PNG</button>
+                  <button onClick={handleExportSVG} className={styles.exportButton}>SVG</button>
+                  <button onClick={handleExportTikZ} className={styles.exportButton}>TikZ</button>
+                  <button onClick={handleExportJSON} className={styles.exportButton}>JSON</button>
+                </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        {bddData && steps.length > 0 && (
-          <>
-            {/* Explanation at top of canvas */}
-            <div className={styles.explanationTop}>
-              <h3 style={{fontWeight: 700}}>Current Step Explanation:</h3>
-              <p>{steps[currentStep]?.explanation}</p>
-              <p className={styles.tip}>Tip: Hold and drag nodes to adjust the diagram position as needed.</p>
+        <div className={styles.rightPane}>
+          <div className={styles.canvasContainer} ref={canvasContainerRef}>
+            <div ref={cyContainerRef} className={styles.cytoscapeContainer} />
+            <div className={styles.zoomControls}>
+              <button onClick={() => handleZoomIn()} className={styles.zoomButton} title="Zoom In">+</button>
+              <button onClick={() => handleZoomOut()} className={styles.zoomButton} title="Zoom Out">-</button>
+              <button onClick={() => handleResetZoom()} className={styles.zoomButton} title="Reset Zoom">↺</button>
             </div>
-
-            {/* Canvas with right vertical legend */}
-            <div className={styles.canvasRow}>
-              <div className={styles.canvasContainer}>
-                <div ref={cyContainerRef} className={styles.cytoscapeContainer} />
-                <div className={styles.zoomControls}>
-                  <button onClick={() => handleZoomIn()} className={styles.zoomButton} title="Zoom In">+</button>
-                  <button onClick={() => handleZoomOut()} className={styles.zoomButton} title="Zoom Out">-</button>
-                  <button onClick={() => handleResetZoom()} className={styles.zoomButton} title="Reset Zoom">↺</button>
-                </div>
-              </div>
-
-
-              <aside className={styles.legendSidebar}>
-                <h3>Legend</h3>
-                <div className={styles.legendItemsVertical}>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendCircle} style={{ backgroundColor: "#90caf9" }}></div>
-                    <span>Decision Node</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendSquare} style={{ backgroundColor: "#81c784" }}></div>
-                    <span>Terminal Node (1)</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendSquare} style={{ backgroundColor: "#e57373" }}></div>
-                    <span>Terminal Node (0)</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendCircle} style={{ backgroundColor: "#ffeb3b" }}></div>
-                    <span>Current Step</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendLine} style={{ borderTop: "2px solid #333", width: 32 }}></div>
-                    <span>High Branch (var=1)</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendLine} style={{ borderTop: "2px dashed #666", width: 32 }}></div>
-                    <span>Low Branch (var=0)</span>
-                  </div>
-                </div>
-              </aside>
-            </div>
-
-            {/* Export and controls below canvas */}
-            <div className={styles.exportSection}>
-              <h3>Export Options:</h3>
-              <div className={styles.exportButtons}>
-                <button onClick={handleExportPNG} className={styles.exportButton}>
-                  Export as PNG
-                </button>
-                <button 
-                    onClick={handleExportSVG} 
-                    className={styles.exportButton}
-                  >
-                    Export as SVG
-                </button>
-                <button onClick={handleExportTikZ} className={styles.exportButton}>
-                  Export as TikZ (LaTeX)
-                </button>
-                <button onClick={handleExportJSON} className={styles.exportButton}>
-                  Export as JSON
-                </button>
-              </div>
-            </div>
-
-            <div className={styles.controls}>
-              <button onClick={handleReset} className={styles.controlButton}>
-                Reset
-              </button>
-              <button onClick={handlePrev} disabled={currentStep === 0} className={styles.controlButton}>
-                Previous
-              </button>
-              <button onClick={handlePlayPause} className={styles.controlButton}>
-                {isPlaying ? "Pause" : "Play"}
-              </button>
-              <button onClick={handleNext} disabled={currentStep >= steps.length - 1} className={styles.controlButton}>
-                Next
-              </button>
-              <span className={styles.stepCounter}>
-                Step {currentStep + 1} of {steps.length}
-              </span>
-            </div>
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   )
