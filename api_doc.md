@@ -28,7 +28,6 @@
   "status": "success",
   "graph_type": "robdd",
   "formula": "a&b|c->~e<->f",
-  "highlighted": true,
   "graph": {
     "nodes": {
       "node_17": {
@@ -140,13 +139,14 @@
 
 # `api/export/latex`: Required run /generate bdd/robdd before export to latex
 - Request Body: Json/dict
-    - "fomular": Same as `/genarate`.
+    - "fomular": Same as `/generate`.
     - "graph_type": 'robdd' or 'bdd', default: 'robdd'
 
 - Example request
 ```
 {
   "formula": "a&b|c->~e<->f",
+  "eval_path": "a:1 b:1 c:0 e:1 f:0"
   "graph_type": "robdd"
 }
 ```
